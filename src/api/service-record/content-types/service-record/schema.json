@@ -1,0 +1,28 @@
+{
+  "kind": "collectionType",
+  "collectionName": "service_records",
+  "info": {
+    "singularName": "service-record",
+    "pluralName": "service-records",
+    "displayName": "Service Records",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "startDateTime": {
+      "type": "datetime",
+      "required": true
+    },
+    "endDateTime": {
+      "type": "datetime"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}
