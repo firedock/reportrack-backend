@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "service_types",
+  "info": {
+    "singularName": "service-type",
+    "pluralName": "service-types",
+    "displayName": "Service Type",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "service": {
+      "type": "string",
+      "required": true
+    },
+    "emailNotifications": {
+      "type": "boolean"
+    },
+    "scanReminders": {
+      "type": "integer"
+    },
+    "requireScanAtEnd": {
+      "type": "boolean"
+    },
+    "showStartTime": {
+      "type": "boolean"
+    },
+    "showEndTime": {
+      "type": "boolean"
+    },
+    "showLocation": {
+      "type": "boolean"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "work_orders",
+  "info": {
+    "singularName": "work-order",
+    "pluralName": "work-orders",
+    "displayName": "Work Order",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

@@ -44,6 +44,21 @@
     },
     "endAlarmDisabled": {
       "type": "boolean"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::property.property"
+    },
+    "service_type": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::service-type.service-type"
     }
   }
 }

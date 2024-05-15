@@ -514,6 +514,10 @@ export interface PluginContentReleasesRelease extends Schema.CollectionType {
     releasedAt: Attribute.DateTime;
     scheduledAt: Attribute.DateTime;
     timezone: Attribute.String;
+    status: Attribute.Enumeration<
+      ['ready', 'blocked', 'failed', 'done', 'empty']
+    > &
+      Attribute.Required;
     actions: Attribute.Relation<
       'plugin::content-releases.release',
       'oneToMany',
@@ -568,6 +572,7 @@ export interface PluginContentReleasesReleaseAction
       'manyToOne',
       'plugin::content-releases.release'
     >;
+    isEntryValid: Attribute.Boolean;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -578,6 +583,53 @@ export interface PluginContentReleasesReleaseAction
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'plugin::content-releases.release-action',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface PluginI18NLocale extends Schema.CollectionType {
+  collectionName: 'i18n_locale';
+  info: {
+    singularName: 'locale';
+    pluralName: 'locales';
+    collectionName: 'locales';
+    displayName: 'Locale';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    name: Attribute.String &
+      Attribute.SetMinMax<
+        {
+          min: 1;
+          max: 50;
+        },
+        number
+      >;
+    code: Attribute.String & Attribute.Unique;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'plugin::i18n.locale',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'plugin::i18n.locale',
       'oneToOne',
       'admin::user'
     > &
@@ -690,7 +742,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
   };
   options: {
     draftAndPublish: false;
-    timestamps: true;
   };
   attributes: {
     username: Attribute.String &
@@ -719,6 +770,17 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.role'
     >;
+    account: Attribute.Relation<
+      'plugin::users-permissions.user',
+      'oneToOne',
+      'api::account.account'
+    >;
+    customers: Attribute.Relation<
+      'plugin::users-permissions.user',
+      'manyToMany',
+      'api::customer.customer'
+    >;
+    name: Attribute.String & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -736,46 +798,29 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
   };
 }
 
-export interface PluginI18NLocale extends Schema.CollectionType {
-  collectionName: 'i18n_locale';
+export interface ApiAccountAccount extends Schema.CollectionType {
+  collectionName: 'accounts';
   info: {
-    singularName: 'locale';
-    pluralName: 'locales';
-    collectionName: 'locales';
-    displayName: 'Locale';
+    singularName: 'account';
+    pluralName: 'accounts';
+    displayName: 'Account';
     description: '';
   };
   options: {
     draftAndPublish: false;
   };
-  pluginOptions: {
-    'content-manager': {
-      visible: false;
-    };
-    'content-type-builder': {
-      visible: false;
-    };
-  };
   attributes: {
-    name: Attribute.String &
-      Attribute.SetMinMax<
-        {
-          min: 1;
-          max: 50;
-        },
-        number
-      >;
-    code: Attribute.String & Attribute.Unique;
+    name: Attribute.String & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
-      'plugin::i18n.locale',
+      'api::account.account',
       'oneToOne',
       'admin::user'
     > &
       Attribute.Private;
     updatedBy: Attribute.Relation<
-      'plugin::i18n.locale',
+      'api::account.account',
       'oneToOne',
       'admin::user'
     > &
@@ -813,6 +858,21 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
     endTime: Attribute.Time;
     endTimeDelay: Attribute.Integer;
     endAlarmDisabled: Attribute.Boolean;
+    account: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToOne',
+      'api::account.account'
+    >;
+    property: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToOne',
+      'api::property.property'
+    >;
+    service_type: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToOne',
+      'api::service-type.service-type'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -830,12 +890,197 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
   };
 }
 
+export interface ApiCustomerCustomer extends Schema.CollectionType {
+  collectionName: 'customers';
+  info: {
+    singularName: 'customer';
+    pluralName: 'customers';
+    displayName: 'Customer';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    name: Attribute.String & Attribute.Required;
+    address: Attribute.Component<'contact.address'>;
+    phone: Attribute.Component<'contact.phone', true>;
+    account: Attribute.Relation<
+      'api::customer.customer',
+      'oneToOne',
+      'api::account.account'
+    >;
+    users: Attribute.Relation<
+      'api::customer.customer',
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::customer.customer',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::customer.customer',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiLocationScanLocationScan extends Schema.CollectionType {
+  collectionName: 'location_scans';
+  info: {
+    singularName: 'location-scan';
+    pluralName: 'location-scans';
+    displayName: 'Location Scan';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    name: Attribute.String;
+    code: Attribute.UID;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::location-scan.location-scan',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::location-scan.location-scan',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiLoginPageLoginPage extends Schema.SingleType {
+  collectionName: 'login_pages';
+  info: {
+    singularName: 'login-page';
+    pluralName: 'login-pages';
+    displayName: 'Login Page';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    title: Attribute.String;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::login-page.login-page',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::login-page.login-page',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiNoteNote extends Schema.CollectionType {
+  collectionName: 'notes';
+  info: {
+    singularName: 'note';
+    pluralName: 'notes';
+    displayName: 'Note';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    note: Attribute.String;
+    account: Attribute.Relation<
+      'api::note.note',
+      'oneToOne',
+      'api::account.account'
+    >;
+    property: Attribute.Relation<
+      'api::note.note',
+      'oneToOne',
+      'api::property.property'
+    >;
+    customer: Attribute.Relation<
+      'api::note.note',
+      'oneToOne',
+      'api::customer.customer'
+    >;
+    private: Attribute.Boolean;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<'api::note.note', 'oneToOne', 'admin::user'> &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<'api::note.note', 'oneToOne', 'admin::user'> &
+      Attribute.Private;
+  };
+}
+
+export interface ApiPropertyProperty extends Schema.CollectionType {
+  collectionName: 'properties';
+  info: {
+    singularName: 'property';
+    pluralName: 'properties';
+    displayName: 'Property';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    name: Attribute.String & Attribute.Required;
+    account: Attribute.Relation<
+      'api::property.property',
+      'oneToOne',
+      'api::account.account'
+    >;
+    customer: Attribute.Relation<
+      'api::property.property',
+      'oneToOne',
+      'api::customer.customer'
+    >;
+    location_scans: Attribute.Relation<
+      'api::property.property',
+      'oneToMany',
+      'api::location-scan.location-scan'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::property.property',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::property.property',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
   collectionName: 'service_records';
   info: {
     singularName: 'service-record';
     pluralName: 'service-records';
-    displayName: 'Service Records';
+    displayName: 'Service Record';
     description: '';
   };
   options: {
@@ -849,6 +1094,27 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       'oneToOne',
       'plugin::users-permissions.user'
     >;
+    account: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'api::account.account'
+    >;
+    property: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'api::property.property'
+    >;
+    customer: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'api::customer.customer'
+    >;
+    note: Attribute.Text;
+    service_type: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'api::service-type.service-type'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -859,6 +1125,87 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::service-record.service-record',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiServiceTypeServiceType extends Schema.CollectionType {
+  collectionName: 'service_types';
+  info: {
+    singularName: 'service-type';
+    pluralName: 'service-types';
+    displayName: 'Service Type';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    service: Attribute.String & Attribute.Required;
+    emailNotifications: Attribute.Boolean;
+    scanReminders: Attribute.Integer;
+    requireScanAtEnd: Attribute.Boolean;
+    showStartTime: Attribute.Boolean;
+    showEndTime: Attribute.Boolean;
+    showLocation: Attribute.Boolean;
+    account: Attribute.Relation<
+      'api::service-type.service-type',
+      'oneToOne',
+      'api::account.account'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::service-type.service-type',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::service-type.service-type',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
+  collectionName: 'work_orders';
+  info: {
+    singularName: 'work-order';
+    pluralName: 'work-orders';
+    displayName: 'Work Order';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    title: Attribute.String & Attribute.Required;
+    account: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToOne',
+      'api::account.account'
+    >;
+    users_permissions_user: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::work-order.work-order',
       'oneToOne',
       'admin::user'
     > &
@@ -880,12 +1227,20 @@ declare module '@strapi/types' {
       'plugin::upload.folder': PluginUploadFolder;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
+      'plugin::i18n.locale': PluginI18NLocale;
       'plugin::users-permissions.permission': PluginUsersPermissionsPermission;
       'plugin::users-permissions.role': PluginUsersPermissionsRole;
       'plugin::users-permissions.user': PluginUsersPermissionsUser;
-      'plugin::i18n.locale': PluginI18NLocale;
+      'api::account.account': ApiAccountAccount;
       'api::alarm.alarm': ApiAlarmAlarm;
+      'api::customer.customer': ApiCustomerCustomer;
+      'api::location-scan.location-scan': ApiLocationScanLocationScan;
+      'api::login-page.login-page': ApiLoginPageLoginPage;
+      'api::note.note': ApiNoteNote;
+      'api::property.property': ApiPropertyProperty;
       'api::service-record.service-record': ApiServiceRecordServiceRecord;
+      'api::service-type.service-type': ApiServiceTypeServiceType;
+      'api::work-order.work-order': ApiWorkOrderWorkOrder;
     }
   }
 }

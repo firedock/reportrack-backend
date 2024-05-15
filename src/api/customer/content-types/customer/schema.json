@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "customers",
+  "info": {
+    "singularName": "customer",
+    "pluralName": "customers",
+    "displayName": "Customer",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "address": {
+      "type": "component",
+      "repeatable": false,
+      "component": "contact.address"
+    },
+    "phone": {
+      "type": "component",
+      "repeatable": true,
+      "component": "contact.phone"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "customers"
+    }
+  }
+}

@@ -4,7 +4,7 @@
   "info": {
     "singularName": "service-record",
     "pluralName": "service-records",
-    "displayName": "Service Records",
+    "displayName": "Service Record",
     "description": ""
   },
   "options": {
@@ -23,6 +23,29 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::property.property"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::customer.customer"
+    },
+    "note": {
+      "type": "text"
+    },
+    "service_type": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::service-type.service-type"
     }
   }
 }

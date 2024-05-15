@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "notes",
+  "info": {
+    "singularName": "note",
+    "pluralName": "notes",
+    "displayName": "Note",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "note": {
+      "type": "string"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::property.property"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::customer.customer"
+    },
+    "private": {
+      "type": "boolean"
+    }
+  }
+}

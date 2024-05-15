@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "properties",
+  "info": {
+    "singularName": "property",
+    "pluralName": "properties",
+    "displayName": "Property",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "account": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account.account"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::customer.customer"
+    },
+    "location_scans": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::location-scan.location-scan"
+    }
+  }
+}

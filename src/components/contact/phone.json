@@ -1,0 +1,16 @@
+{
+  "collectionName": "components_contact_phones",
+  "info": {
+    "displayName": "Phone",
+    "icon": "phone"
+  },
+  "options": {},
+  "attributes": {
+    "type": {
+      "type": "string"
+    },
+    "number": {
+      "type": "biginteger"
+    }
+  }
+}

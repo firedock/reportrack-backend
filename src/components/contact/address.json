@@ -1,0 +1,27 @@
+{
+  "collectionName": "components_contact_addresses",
+  "info": {
+    "displayName": "Address",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "street": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "maxLength": 2
+    },
+    "zip": {
+      "type": "biginteger"
+    },
+    "type": {
+      "type": "string",
+      "default": "primary"
+    }
+  }
+}
