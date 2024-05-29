@@ -21,10 +21,30 @@
       "relation": "oneToOne",
       "target": "api::account.account"
     },
-    "users_permissions_user": {
+    "customer": {
       "type": "relation",
       "relation": "oneToOne",
-      "target": "plugin::users-permissions.user"
+      "target": "api::customer.customer"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::property.property"
+    },
+    "dueBy": {
+      "type": "datetime"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "New",
+        "Open",
+        "In Progress",
+        "Complete"
+      ]
+    },
+    "private": {
+      "type": "boolean"
     }
   }
 }

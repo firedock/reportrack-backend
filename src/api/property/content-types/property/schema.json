@@ -23,13 +23,20 @@
     },
     "customer": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::customer.customer"
+      "relation": "manyToOne",
+      "target": "api::customer.customer",
+      "inversedBy": "properties"
     },
     "location_scans": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::location-scan.location-scan"
+      "target": "api::location-scan.location-scan",
+      "mappedBy": "property"
+    },
+    "service_types": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::service-type.service-type"
     }
   }
 }

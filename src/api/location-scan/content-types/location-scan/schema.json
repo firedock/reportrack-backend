@@ -17,6 +17,12 @@
     },
     "code": {
       "type": "uid"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property",
+      "inversedBy": "location_scans"
     }
   }
 }

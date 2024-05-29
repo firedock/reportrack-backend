@@ -36,6 +36,15 @@
       "relation": "manyToMany",
       "target": "plugin::users-permissions.user",
       "mappedBy": "customers"
+    },
+    "properties": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::property.property",
+      "mappedBy": "customer"
+    },
+    "oid": {
+      "type": "uid"
     }
   }
 }

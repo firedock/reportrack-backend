@@ -915,6 +915,12 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
       'manyToMany',
       'plugin::users-permissions.user'
     >;
+    properties: Attribute.Relation<
+      'api::customer.customer',
+      'oneToMany',
+      'api::property.property'
+    >;
+    oid: Attribute.UID;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -946,6 +952,11 @@ export interface ApiLocationScanLocationScan extends Schema.CollectionType {
   attributes: {
     name: Attribute.String;
     code: Attribute.UID;
+    property: Attribute.Relation<
+      'api::location-scan.location-scan',
+      'manyToOne',
+      'api::property.property'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1050,13 +1061,18 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
     >;
     customer: Attribute.Relation<
       'api::property.property',
-      'oneToOne',
+      'manyToOne',
       'api::customer.customer'
     >;
     location_scans: Attribute.Relation<
       'api::property.property',
       'oneToMany',
       'api::location-scan.location-scan'
+    >;
+    service_types: Attribute.Relation<
+      'api::property.property',
+      'oneToMany',
+      'api::service-type.service-type'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -1068,6 +1084,49 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::property.property',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiServiceLocationScanServiceLocationScan
+  extends Schema.CollectionType {
+  collectionName: 'service_location_scans';
+  info: {
+    singularName: 'service-location-scan';
+    pluralName: 'service-location-scans';
+    displayName: 'Service Location Scan';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    service_record: Attribute.Relation<
+      'api::service-location-scan.service-location-scan',
+      'manyToOne',
+      'api::service-record.service-record'
+    >;
+    location_scan: Attribute.Relation<
+      'api::service-location-scan.service-location-scan',
+      'oneToOne',
+      'api::location-scan.location-scan'
+    >;
+    scanTime: Attribute.DateTime;
+    latitude: Attribute.Float;
+    longitude: Attribute.Float;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::service-location-scan.service-location-scan',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::service-location-scan.service-location-scan',
       'oneToOne',
       'admin::user'
     > &
@@ -1114,6 +1173,11 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       'api::service-record.service-record',
       'oneToOne',
       'api::service-type.service-type'
+    >;
+    service_location_scans: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToMany',
+      'api::service-location-scan.service-location-scan'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -1191,11 +1255,19 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'oneToOne',
       'api::account.account'
     >;
-    users_permissions_user: Attribute.Relation<
+    customer: Attribute.Relation<
       'api::work-order.work-order',
       'oneToOne',
-      'plugin::users-permissions.user'
+      'api::customer.customer'
     >;
+    property: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToOne',
+      'api::property.property'
+    >;
+    dueBy: Attribute.DateTime;
+    status: Attribute.Enumeration<['New', 'Open', 'In Progress', 'Complete']>;
+    private: Attribute.Boolean;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1238,6 +1310,7 @@ declare module '@strapi/types' {
       'api::login-page.login-page': ApiLoginPageLoginPage;
       'api::note.note': ApiNoteNote;
       'api::property.property': ApiPropertyProperty;
+      'api::service-location-scan.service-location-scan': ApiServiceLocationScanServiceLocationScan;
       'api::service-record.service-record': ApiServiceRecordServiceRecord;
       'api::service-type.service-type': ApiServiceTypeServiceType;
       'api::work-order.work-order': ApiWorkOrderWorkOrder;
