@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# repository/project stuff
+.idea/
+.git/
+.gitlab-ci.yml
+README.md
+
+# misc
+.DS_Store
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+
+# non prod env files
+.env.development
+.env.test
