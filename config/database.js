@@ -62,8 +62,8 @@ module.exports = ({ env }) => {
         ),
         port: env.int('DATABASE_PORT', 5432),
         database: env('DATABASE_NAME', 'reportrack'),
-        user: env('DATABASE_USERNAME', 'postgres'),
-        password: env('DATABASE_PASSWORD', 'rfacc355'),
+        user: env('DATABASE_USERNAME', undefined),
+        password: env('DATABASE_PASSWORD', undefined),
         ssl: env.bool('DATABASE_SSL', true)
           ? {
               rejectUnauthorized: env.bool(
