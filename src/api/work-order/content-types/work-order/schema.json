@@ -8,7 +8,8 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": false
+    "draftAndPublish": false,
+    "populateCreatorFields": true
   },
   "pluginOptions": {},
   "attributes": {
@@ -36,12 +37,7 @@
     },
     "status": {
       "type": "enumeration",
-      "enum": [
-        "New",
-        "Open",
-        "In Progress",
-        "Complete"
-      ]
+      "enum": ["New", "Open", "In Progress", "Complete"]
     },
     "private": {
       "type": "boolean"

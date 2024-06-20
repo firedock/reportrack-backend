@@ -1247,6 +1247,7 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
   };
   options: {
     draftAndPublish: false;
+    populateCreatorFields: true;
   };
   attributes: {
     title: Attribute.String & Attribute.Required;
@@ -1274,14 +1275,12 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'api::work-order.work-order',
       'oneToOne',
       'admin::user'
-    > &
-      Attribute.Private;
+    >;
     updatedBy: Attribute.Relation<
       'api::work-order.work-order',
       'oneToOne',
       'admin::user'
-    > &
-      Attribute.Private;
+    >;
   };
 }
 
