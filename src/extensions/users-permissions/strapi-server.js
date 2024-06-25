@@ -11,7 +11,7 @@ module.exports = (plugin) => {
       offset: (parseInt(page, 10) - 1) * parseInt(pageSize, 10),
       orderBy: sort ? { [sort.split(':')[0]]: sort.split(':')[1] } : {},
       where: filters || {},
-      populate: ['role'],
+      populate: ['role', 'customers'],
     };
 
     // Fetch users with pagination, sorting, and filtering
@@ -45,7 +45,8 @@ module.exports = (plugin) => {
             createdAt: sanitizedUser.createdAt,
             updatedAt: sanitizedUser.updatedAt,
             name: sanitizedUser.name,
-            role: sanitizedUser.role, // Include role if needed
+            role: sanitizedUser.role,
+            customers: sanitizedUser.customers,
           },
         };
       })

@@ -781,6 +781,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'api::customer.customer'
     >;
     name: Attribute.String & Attribute.Required;
+    oid: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

@@ -79,6 +79,9 @@
     "name": {
       "type": "string",
       "required": true
+    },
+    "oid": {
+      "type": "string"
     }
   }
 }
