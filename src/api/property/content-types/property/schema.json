@@ -37,6 +37,9 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::service-type.service-type"
+    },
+    "alarms": {
+      "type": "json"
     }
   }
 }

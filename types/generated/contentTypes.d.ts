@@ -874,6 +874,8 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
       'oneToOne',
       'api::service-type.service-type'
     >;
+    notified: Attribute.DateTime;
+    daysOfWeek: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1075,6 +1077,7 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'oneToMany',
       'api::service-type.service-type'
     >;
+    alarms: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
