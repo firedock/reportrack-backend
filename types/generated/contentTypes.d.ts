@@ -941,42 +941,6 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
   };
 }
 
-export interface ApiLocationScanLocationScan extends Schema.CollectionType {
-  collectionName: 'location_scans';
-  info: {
-    singularName: 'location-scan';
-    pluralName: 'location-scans';
-    displayName: 'Location Scan';
-    description: '';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    name: Attribute.String;
-    code: Attribute.UID;
-    property: Attribute.Relation<
-      'api::location-scan.location-scan',
-      'manyToOne',
-      'api::property.property'
-    >;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::location-scan.location-scan',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::location-scan.location-scan',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 export interface ApiLoginPageLoginPage extends Schema.SingleType {
   collectionName: 'login_pages';
   info: {
@@ -1067,17 +1031,13 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'manyToOne',
       'api::customer.customer'
     >;
-    location_scans: Attribute.Relation<
-      'api::property.property',
-      'oneToMany',
-      'api::location-scan.location-scan'
-    >;
     service_types: Attribute.Relation<
       'api::property.property',
       'oneToMany',
       'api::service-type.service-type'
     >;
     alarms: Attribute.JSON;
+    locationScans: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1088,49 +1048,6 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::property.property',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
-export interface ApiServiceLocationScanServiceLocationScan
-  extends Schema.CollectionType {
-  collectionName: 'service_location_scans';
-  info: {
-    singularName: 'service-location-scan';
-    pluralName: 'service-location-scans';
-    displayName: 'Service Location Scan';
-    description: '';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    service_record: Attribute.Relation<
-      'api::service-location-scan.service-location-scan',
-      'manyToOne',
-      'api::service-record.service-record'
-    >;
-    location_scan: Attribute.Relation<
-      'api::service-location-scan.service-location-scan',
-      'oneToOne',
-      'api::location-scan.location-scan'
-    >;
-    scanTime: Attribute.DateTime;
-    latitude: Attribute.Float;
-    longitude: Attribute.Float;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::service-location-scan.service-location-scan',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::service-location-scan.service-location-scan',
       'oneToOne',
       'admin::user'
     > &
@@ -1178,11 +1095,7 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       'oneToOne',
       'api::service-type.service-type'
     >;
-    service_location_scans: Attribute.Relation<
-      'api::service-record.service-record',
-      'oneToMany',
-      'api::service-location-scan.service-location-scan'
-    >;
+    locationScans: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1309,11 +1222,9 @@ declare module '@strapi/types' {
       'api::account.account': ApiAccountAccount;
       'api::alarm.alarm': ApiAlarmAlarm;
       'api::customer.customer': ApiCustomerCustomer;
-      'api::location-scan.location-scan': ApiLocationScanLocationScan;
       'api::login-page.login-page': ApiLoginPageLoginPage;
       'api::note.note': ApiNoteNote;
       'api::property.property': ApiPropertyProperty;
-      'api::service-location-scan.service-location-scan': ApiServiceLocationScanServiceLocationScan;
       'api::service-record.service-record': ApiServiceRecordServiceRecord;
       'api::service-type.service-type': ApiServiceTypeServiceType;
       'api::work-order.work-order': ApiWorkOrderWorkOrder;

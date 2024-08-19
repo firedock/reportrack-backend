@@ -29,5 +29,40 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+    async locationScans(ctx) {
+      try {
+        const { code } = ctx.query;
+
+        if (!code) {
+          ctx.throw(400, 'Code query parameter is required');
+        }
+
+        const knex = strapi.db.connection; // Accessing knex directly
+
+        // Build the query using knex to match the JSONB structure
+        const record = await knex('properties')
+          .whereRaw('location_scans @> ?', [`[{"code": "${code}"}]`])
+          .first();
+
+        if (!record) {
+          ctx.throw(404, 'No property found with the given code');
+        }
+
+        // Manually populate related data if necessary
+        if (ctx.query.populate) {
+          const populatedRecord = await strapi.entityService.findOne(
+            'api::property.property',
+            record.id,
+            // @ts-ignore
+            { populate: ctx.query.populate }
+          );
+          ctx.send({ ...populatedRecord });
+        } else {
+          ctx.send({ ...record });
+        }
+      } catch (error) {
+        ctx.throw(500, error.message);
+      }
+    },
   })
 );

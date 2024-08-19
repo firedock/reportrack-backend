@@ -8,5 +8,13 @@ module.exports = {
         auth: false,
       },
     },
+    {
+      method: 'GET',
+      path: '/properties/custom/locationScan',
+      handler: 'property.locationScans',
+      config: {
+        auth: false,
+      },
+    },
   ],
 };
