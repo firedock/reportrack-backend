@@ -21,3 +21,6 @@ yarn-error.log*
 # non prod env files
 .env.development
 .env.test
+
+# eb config
+.ebextensions/nodecommand.config
