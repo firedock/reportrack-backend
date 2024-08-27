@@ -1,6 +1,12 @@
+// @ts-nocheck
 const { sanitize } = require('@strapi/utils');
 
 module.exports = (plugin) => {
+  // plugin.controllers.auth.callback = async (ctx) => {
+  //   // https://github.com/strapi/strapi/issues/11957
+  //   console.log('plugin.controllers.auth.callback', ctx);
+  // };
+
   plugin.controllers.user.find = async (ctx) => {
     const { page = 1, pageSize = 25 } = ctx.query.pagination || {};
     const { sort, filters } = ctx.query || {};
