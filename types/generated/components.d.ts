@@ -1,5 +1,17 @@
 import type { Schema, Attribute } from '@strapi/strapi';
 
+export interface ContactPhone extends Schema.Component {
+  collectionName: 'components_contact_phones';
+  info: {
+    displayName: 'Phone';
+    icon: 'phone';
+  };
+  attributes: {
+    type: Attribute.String;
+    number: Attribute.BigInteger;
+  };
+}
+
 export interface ContactAddress extends Schema.Component {
   collectionName: 'components_contact_addresses';
   info: {
@@ -18,23 +30,11 @@ export interface ContactAddress extends Schema.Component {
   };
 }
 
-export interface ContactPhone extends Schema.Component {
-  collectionName: 'components_contact_phones';
-  info: {
-    displayName: 'Phone';
-    icon: 'phone';
-  };
-  attributes: {
-    type: Attribute.String;
-    number: Attribute.BigInteger;
-  };
-}
-
 declare module '@strapi/types' {
   export module Shared {
     export interface Components {
-      'contact.address': ContactAddress;
       'contact.phone': ContactPhone;
+      'contact.address': ContactAddress;
     }
   }
 }
