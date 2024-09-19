@@ -1,8 +1,7 @@
-// @ts-nocheck
 'use strict';
 
 const { createCoreController } = require('@strapi/strapi').factories;
-const { sanitize } = require('@strapi/utils');
+// const { sanitize } = require('@strapi/utils');
 
 module.exports = createCoreController(
   'api::work-order.work-order',

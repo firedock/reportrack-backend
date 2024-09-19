@@ -1096,6 +1096,7 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       'api::service-type.service-type'
     >;
     locationScans: Attribute.JSON;
+    media: Attribute.Media<'images', true>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
