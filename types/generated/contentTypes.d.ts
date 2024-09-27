@@ -893,6 +893,40 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
   };
 }
 
+export interface ApiAuditLogAuditLog extends Schema.CollectionType {
+  collectionName: 'audit_logs';
+  info: {
+    singularName: 'audit-log';
+    pluralName: 'audit-logs';
+    displayName: 'AuditLog';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    type: Attribute.Text;
+    action: Attribute.Text;
+    result: Attribute.JSON;
+    params: Attribute.JSON;
+    author: Attribute.String;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::audit-log.audit-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::audit-log.audit-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiCustomerCustomer extends Schema.CollectionType {
   collectionName: 'customers';
   info: {
@@ -1097,6 +1131,16 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
     >;
     locationScans: Attribute.JSON;
     media: Attribute.Media<'images', true>;
+    author: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
+    editor: Attribute.Relation<
+      'api::service-record.service-record',
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1222,6 +1266,7 @@ declare module '@strapi/types' {
       'plugin::users-permissions.user': PluginUsersPermissionsUser;
       'api::account.account': ApiAccountAccount;
       'api::alarm.alarm': ApiAlarmAlarm;
+      'api::audit-log.audit-log': ApiAuditLogAuditLog;
       'api::customer.customer': ApiCustomerCustomer;
       'api::login-page.login-page': ApiLoginPageLoginPage;
       'api::note.note': ApiNoteNote;
