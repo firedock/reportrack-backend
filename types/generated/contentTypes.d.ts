@@ -782,6 +782,11 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
     >;
     name: Attribute.String & Attribute.Required;
     oid: Attribute.String;
+    properties: Attribute.Relation<
+      'plugin::users-permissions.user',
+      'manyToMany',
+      'api::property.property'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1072,6 +1077,11 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
     >;
     alarms: Attribute.JSON;
     locationScans: Attribute.JSON;
+    users: Attribute.Relation<
+      'api::property.property',
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

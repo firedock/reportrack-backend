@@ -82,6 +82,12 @@
     },
     "oid": {
       "type": "string"
+    },
+    "properties": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::property.property",
+      "inversedBy": "users"
     }
   }
 }
