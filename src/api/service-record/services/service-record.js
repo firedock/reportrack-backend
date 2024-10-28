@@ -29,12 +29,17 @@ module.exports = createCoreService(
       const queryOptions = {
         where: { ...userFilters, ...filters }, // Merge user filters and search filters
         populate: {
-          property: true,
-          customer: true,
+          property: {
+            populate: ['users'], // Explicitly populate 'users' inside 'property'
+          },
+          customer: {
+            populate: ['users'], // Explicitly populate 'users' inside 'property'
+          },
           service_type: true,
           users_permissions_user: true,
           author: true,
         },
+
         limit: pageSize,
         offset: (page - 1) * pageSize,
       };
