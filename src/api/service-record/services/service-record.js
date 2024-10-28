@@ -25,7 +25,7 @@ module.exports = createCoreService(
         userFilters = { users_permissions_user: user.id };
       }
 
-      // Prepare the query object with pagination, filters, and sort
+      // Prepare the query object with pagination, filters, and default sort by startDateTime in descending order
       const queryOptions = {
         where: { ...userFilters, ...filters }, // Merge user filters and search filters
         populate: {
@@ -39,24 +39,28 @@ module.exports = createCoreService(
           users_permissions_user: true,
           author: true,
         },
-
         limit: pageSize,
         offset: (page - 1) * pageSize,
+        orderBy: sort
+          ? undefined // Let the sorting be handled below if provided in the query
+          : { startDateTime: 'desc' }, // Default sorting by startDateTime in descending order
       };
 
-      // Add sorting if provided
+      // Add sorting if provided in query parameters
       if (sort) {
         const [sortField, sortOrder] = sort.split(':');
 
         // Handle sorting for nested fields
         if (sortField.includes('.')) {
           const [relation, field] = sortField.split('.');
+          // @ts-ignore
           queryOptions.orderBy = {
             [relation]: {
               [field]: sortOrder,
             },
           };
         } else {
+          // @ts-ignore
           queryOptions.orderBy = { [sortField]: sortOrder };
         }
       }
