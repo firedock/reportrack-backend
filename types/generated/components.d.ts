@@ -1,4 +1,22 @@
-import type { Schema, Attribute } from '@strapi/strapi';
+import type { Attribute, Schema } from '@strapi/strapi';
+
+export interface ContactAddress extends Schema.Component {
+  collectionName: 'components_contact_addresses';
+  info: {
+    description: '';
+    displayName: 'Address';
+  };
+  attributes: {
+    city: Attribute.String;
+    state: Attribute.String &
+      Attribute.SetMinMaxLength<{
+        maxLength: 2;
+      }>;
+    street: Attribute.String;
+    type: Attribute.String & Attribute.DefaultTo<'primary'>;
+    zip: Attribute.BigInteger;
+  };
+}
 
 export interface ContactPhone extends Schema.Component {
   collectionName: 'components_contact_phones';
@@ -7,34 +25,16 @@ export interface ContactPhone extends Schema.Component {
     icon: 'phone';
   };
   attributes: {
-    type: Attribute.String;
     number: Attribute.BigInteger;
-  };
-}
-
-export interface ContactAddress extends Schema.Component {
-  collectionName: 'components_contact_addresses';
-  info: {
-    displayName: 'Address';
-    description: '';
-  };
-  attributes: {
-    street: Attribute.String;
-    city: Attribute.String;
-    state: Attribute.String &
-      Attribute.SetMinMaxLength<{
-        maxLength: 2;
-      }>;
-    zip: Attribute.BigInteger;
-    type: Attribute.String & Attribute.DefaultTo<'primary'>;
+    type: Attribute.String;
   };
 }
 
 declare module '@strapi/types' {
   export module Shared {
     export interface Components {
-      'contact.phone': ContactPhone;
       'contact.address': ContactAddress;
+      'contact.phone': ContactPhone;
     }
   }
 }
