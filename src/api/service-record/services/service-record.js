@@ -14,14 +14,23 @@ module.exports = createCoreService(
       const filters = queryParams?.filters || {};
       const doAssociatedFilter =
         queryParams?.showAssociatedOnly === 'true' && user?.id;
+
       const userRole = user?.role?.name;
 
       let userFilters = {};
 
       if (userRole === 'Customer') {
-        userFilters = { customer: user.id };
+        userFilters = {
+          customer: {
+            users: {
+              id: { $eq: user.id },
+            },
+          },
+        };
+        // console.log('Customer Filters', userFilters);
       } else if (userRole === 'Service Person') {
         userFilters = { users_permissions_user: user.id };
+        // console.log('Service Person Filters', userFilters);
       }
 
       // Determine if we need to filter by associated users
@@ -44,6 +53,7 @@ module.exports = createCoreService(
             },
           ],
         };
+        // console.log('Show Associated', userFilters);
       }
 
       // Set up query options with pagination, sorting, and user filters

@@ -26,5 +26,15 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+    async find(ctx) {
+      const user = ctx.state.user; // Get the authenticated user
+
+      // Use the service to fetch the records based on user filters
+      const records = await strapi
+        .service('api::work-order.work-order')
+        .findRecordsByUser(user, ctx.query);
+
+      return ctx.send(records); // Return the filtered records
+    },
   })
 );
