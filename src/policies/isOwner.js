@@ -25,7 +25,7 @@ module.exports = async (policyContext, config, { strapi }) => {
     return false;
   }
 
-  console.log('record', record);
+  // console.log('record', record);
 
   // Check if the user is the owner (or creator) of the resource
   if (record.createdBy && record.createdBy.id !== user.id) {
