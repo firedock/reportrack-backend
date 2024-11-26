@@ -1,5 +1,6 @@
 // @ts-nocheck
 const { ApplicationError, ValidationError } = require('@strapi/utils').errors;
+const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
 const { sanitize } = require('@strapi/utils');
 
 module.exports = (plugin) => {
@@ -130,9 +131,13 @@ module.exports = (plugin) => {
           role: role || existingUser.role,
         };
 
-        // Ensure password changes are valid
-        if (password === '') {
-          throw new ValidationError('Password cannot be empty');
+        // Hash the password if provided
+        if (password) {
+          if (password === '') {
+            throw new ValidationError('Password cannot be empty');
+          }
+          const hashedPassword = await bcrypt.hash(password, 10);
+          updateData.password = hashedPassword; // Replace plaintext password with hashed password
         }
 
         // Perform the update

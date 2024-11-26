@@ -2,13 +2,13 @@
 
 module.exports = {
   async beforeCreate(event) {
-    console.log('beforeCreate service-record');
+    // console.log('beforeCreate service-record');
   },
   async beforeUpdate(event) {
-    console.log('beforeUpdate service-record');
+    // console.log('beforeUpdate service-record');
   },
   async beforeFindMany(event) {
-    console.log('beforeFindMany service-record');
+    // console.log('beforeFindMany service-record');
   },
   afterCreate(event) {
     const { result, params, action } = event;

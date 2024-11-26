@@ -1,8 +1,8 @@
 module.exports = {
   async beforeCreate(event) {
-    console.log('beforeCreate work-order');
+    // console.log('beforeCreate work-order');
   },
   async beforeUpdate(event) {
-    console.log('beforeUpdate work-order');
+    // console.log('beforeUpdate work-order');
   },
 };
