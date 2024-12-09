@@ -9,6 +9,9 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController(
   'api::property.property',
   ({ strapi }) => ({
+    async alarms(ctx) {
+      // get all alarms from properties
+    },
     async count(ctx) {
       try {
         // Extract filters from the context if provided

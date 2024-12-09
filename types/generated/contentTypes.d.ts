@@ -417,6 +417,11 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
       'admin::user'
     > &
       Attribute.Private;
+    customer: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToOne',
+      'api::customer.customer'
+    >;
     day: Attribute.Enumeration<
       [
         'Sunday',
@@ -446,6 +451,9 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
     startAlarmDisabled: Attribute.Boolean;
     startTime: Attribute.Time;
     startTimeDelay: Attribute.Integer;
+    timezone: Attribute.String &
+      Attribute.Required &
+      Attribute.DefaultTo<'UTC'>;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
       'api::alarm.alarm',

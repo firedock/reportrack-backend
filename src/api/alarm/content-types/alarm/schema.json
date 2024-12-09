@@ -65,6 +65,16 @@
     },
     "daysOfWeek": {
       "type": "json"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::customer.customer"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC",
+      "required": true
     }
   }
 }
