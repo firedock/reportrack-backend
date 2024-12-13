@@ -14,111 +14,144 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
     const logs = []; // Array to collect log messages
 
     try {
-      logs.push(`[${dayjs().format()}] Starting alarm checks...`);
+      logs.push(`[${dayjs().utc().toISOString()}] Starting alarm checks...`);
 
+      // Fetch active alarms with related properties and customers
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
         where: { active: true },
         populate: { property: true, customer: true },
       });
 
-      const currentTimeUTC = dayjs.utc();
       logs.push(
-        `[${currentTimeUTC.format()}] Fetched ${alarms.length} active alarms.`
+        `[${dayjs().utc().toISOString()}] Fetched ${
+          alarms.length
+        } active alarms.`
       );
+
+      const currentTimeUtc = dayjs.utc();
 
       for (const alarm of alarms) {
         const {
           id,
           startTime,
           endTime,
-          startTimeDelay = 15,
-          endTimeDelay = 15,
-          timezone = 'UTC',
-          startAlarmDisabled,
-          endAlarmDisabled,
-          notified,
+          startTimeDelay = 10,
+          endTimeDelay = 10,
+          timezone: alarmTimezone = 'UTC',
+          daysOfWeek,
         } = alarm;
 
-        // Get the current time in the alarm's timezone
-        const currentTimeInTimezone = currentTimeUTC.tz(timezone);
         logs.push(
           `----------------------------------------------------------------------------------------`
         );
-        logs.push(
-          `- Current time in alarm timezone (${timezone}): ${currentTimeInTimezone.format()}`
-        );
 
-        // Calculate trigger times based on the current local date in the alarm's timezone
-        const startTriggerTime = dayjs
-          .tz(
-            `${currentTimeInTimezone.format('YYYY-MM-DD')}T${startTime}`,
-            timezone
-          )
-          .add(startTimeDelay, 'minute');
-        const endTriggerTime = dayjs
-          .tz(
-            `${currentTimeInTimezone.format('YYYY-MM-DD')}T${endTime}`,
-            timezone
-          )
-          .add(endTimeDelay, 'minute');
+        const currentTimeInTimezone = currentTimeUtc.tz(alarmTimezone);
+        const currentDay = currentTimeInTimezone.format('dddd');
 
         logs.push(
-          `- Start trigger time (${timezone}): ${startTriggerTime.format()}`
+          `- Alarm ID ${id}: Current time in alarm timezone (${alarmTimezone}): ${currentTimeInTimezone.format()}`
+        );
+        logs.push(`- Days configured for alarm: ${daysOfWeek.join(', ')}`);
+        logs.push(`- Current day: ${currentDay}`);
+
+        // Skip alarm if it's not scheduled for the current day
+        if (!daysOfWeek.includes(currentDay)) {
+          logs.push(
+            `- Skipping alarm ID ${id}: Not configured for today (${currentDay}).`
+          );
+          continue;
+        }
+
+        let startTriggerTime, endTriggerTime;
+
+        // Parse and calculate start trigger time in the alarm's timezone
+        logs.push(`- Raw startTime: ${startTime}`);
+        if (startTime && /^\d{2}:\d{2}:\d{2}$/.test(startTime)) {
+          startTriggerTime = currentTimeInTimezone
+            .startOf('day')
+            .set('hour', parseInt(startTime.split(':')[0], 10))
+            .set('minute', parseInt(startTime.split(':')[1], 10))
+            .set('second', parseInt(startTime.split(':')[2], 10))
+            .add(startTimeDelay, 'minute');
+        } else {
+          logs.push(`- Invalid startTime: ${startTime}`);
+        }
+
+        // Parse and calculate end trigger time in the alarm's timezone
+        logs.push(`- Raw endTime: ${endTime}`);
+        if (endTime && /^\d{2}:\d{2}:\d{2}$/.test(endTime)) {
+          endTriggerTime = currentTimeInTimezone
+            .startOf('day')
+            .set('hour', parseInt(endTime.split(':')[0], 10))
+            .set('minute', parseInt(endTime.split(':')[1], 10))
+            .set('second', parseInt(endTime.split(':')[2], 10))
+            .add(endTimeDelay, 'minute');
+        } else {
+          logs.push(`- Invalid endTime: ${endTime}`);
+        }
+
+        logs.push(
+          `- Start trigger time (${alarmTimezone}): ${
+            startTriggerTime ? startTriggerTime.format() : 'Invalid Date'
+          }`
         );
         logs.push(
-          `- End trigger time (${timezone}): ${endTriggerTime.format()}`
+          `- End trigger time (${alarmTimezone}): ${
+            endTriggerTime ? endTriggerTime.format() : 'Invalid Date'
+          }`
         );
 
+        // Skip alarm if trigger times are invalid
+        if (!startTriggerTime || !endTriggerTime) {
+          logs.push(`- Skipping alarm ID ${id}: Invalid trigger times.`);
+          continue;
+        }
+
+        // Check notification and trigger conditions
         const hasBeenNotifiedToday =
-          notified && dayjs(notified).isSame(currentTimeInTimezone, 'day');
+          alarm.notified &&
+          dayjs(alarm.notified).isSame(currentTimeInTimezone, 'day');
 
         logs.push(`- Alarm already notified today: ${hasBeenNotifiedToday}`);
 
-        // Check Start Alarm
         if (
           currentTimeInTimezone.isAfter(startTriggerTime) &&
-          !startAlarmDisabled &&
+          !alarm.startAlarmDisabled &&
           !hasBeenNotifiedToday
         ) {
           logs.push(`- Conditions met for start alarm. Triggering now...`);
-          await this.triggerAlarm(alarm, 'start');
+          await strapi.service('api::alarm.alarm').triggerAlarm(alarm, 'start');
           logs.push(`- Start alarm triggered successfully for Alarm ID ${id}.`);
         } else {
-          logs.push(
-            `- Start alarm not triggered. Conditions: currentTimeInTimezone.isAfter(startTriggerTime) = ${currentTimeInTimezone.isAfter(
-              startTriggerTime
-            )}, startAlarmDisabled = ${startAlarmDisabled}, hasBeenNotifiedToday = ${hasBeenNotifiedToday}`
-          );
+          logs.push(`- Start alarm not triggered.`);
         }
 
-        // Check End Alarm
         if (
           currentTimeInTimezone.isAfter(endTriggerTime) &&
-          !endAlarmDisabled &&
+          !alarm.endAlarmDisabled &&
           !hasBeenNotifiedToday
         ) {
           logs.push(`- Conditions met for end alarm. Triggering now...`);
-          await this.triggerAlarm(alarm, 'end');
+          await strapi.service('api::alarm.alarm').triggerAlarm(alarm, 'end');
           logs.push(`- End alarm triggered successfully for Alarm ID ${id}.`);
         } else {
-          logs.push(
-            `- End alarm not triggered. Conditions: currentTimeInTimezone.isAfter(endTriggerTime) = ${currentTimeInTimezone.isAfter(
-              endTriggerTime
-            )}, endAlarmDisabled = ${endAlarmDisabled}, hasBeenNotifiedToday = ${hasBeenNotifiedToday}`
-          );
+          logs.push(`- End alarm not triggered.`);
         }
       }
 
-      logs.push(`[${dayjs().format()}] Finished processing alarms.`);
+      logs.push(`[${dayjs().utc().toISOString()}] Finished processing alarms.`);
     } catch (error) {
       logs.push(
-        `[${dayjs().format()}] Error checking alarms: ${error.message}`
+        `[${dayjs().utc().toISOString()}] Error checking alarms: ${
+          error.message
+        }`
       );
       console.error(error);
     }
 
-    return logs;
+    return logs; // Return logs for debugging
   },
+
   async triggerAlarm(alarm, type) {
     try {
       const { property, customer } = alarm;
