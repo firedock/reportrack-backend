@@ -78,26 +78,37 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         );
 
         // Parse and calculate trigger times in the alarm's timezone
-        const startTriggerTime = dayjs
+        const alarmStartTime = dayjs
           .tz(
             `${currentTimeInTimezone.format('YYYY-MM-DD')}T${startTime}`,
             alarmTimezone
           )
           .add(startTimeDelay, 'minute');
 
-        const endTriggerTime = dayjs
+        const alarmEndTime = dayjs
           .tz(
             `${currentTimeInTimezone.format('YYYY-MM-DD')}T${endTime}`,
             alarmTimezone
           )
           .add(endTimeDelay, 'minute');
 
-        const startTriggerTimeUtc = startTriggerTime.utc().toISOString();
-        const endTriggerTimeUtc = endTriggerTime.utc().toISOString();
+        const alarmStartTimeUtc = alarmStartTime.utc().toISOString();
+        const alarmEndTimeUtc = alarmEndTime.utc().toISOString();
 
         logs.push(
-          `- Start trigger time (UTC): ${startTriggerTimeUtc}, End trigger time (UTC): ${endTriggerTimeUtc}`
+          `- Alarm Start Time (UTC): ${alarmStartTimeUtc}, End Time (UTC): ${alarmEndTimeUtc}`
         );
+
+        // const utcDayRange = getUtcDayRange(alarmTimezone);
+        // logs.push(`- Get UTC day range for: ${alarmTimezone}`);
+        // logs.push(utcDayRange);
+
+        // logs.push(
+        //   `- UTC day range for alarm timezone: ${utcDayRange.utcStart} to ${utcDayRange.utcEnd}`
+        // );
+        // logs.push(
+        //   `- Day range for alarm timezone: ${utcDayRange.timezoneStart} to ${utcDayRange.timezoneEnd}`
+        // );
 
         // Service record query using the corrected todayStartUtc
         const query = {
@@ -106,13 +117,13 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             $or: [
               {
                 startDateTime: {
-                  $lte: startTriggerTimeUtc,
+                  $lte: alarmStartTimeUtc,
                   $gte: todayStartUtc,
                 },
               },
               {
                 endDateTime: {
-                  $lte: endTriggerTimeUtc,
+                  $lte: alarmEndTimeUtc,
                   $gte: todayStartUtc,
                 },
               },
@@ -120,36 +131,44 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           },
         };
 
-        logs.push(`- Service record query: ${JSON.stringify(query)}`);
+        logs.push(`- Service record query:`);
+        logs.push(query);
 
         const serviceRecords = await strapi.db
           .query('api::service-record.service-record')
           .findMany(query);
+        logs.push(`- Service record result:`);
+        logs.push(serviceRecords);
 
-        // Separate checks for start and end justifications
-        const hasStartJustification = serviceRecords.some(
+        // Confirms that a service record started within the appropriate timeframe for the alarm's start.
+        const serviceHasStarted = serviceRecords.some(
           (record) =>
-            dayjs(record.startDateTime).isSameOrBefore(startTriggerTimeUtc) &&
+            // Started on or before the alarm's start time
+            dayjs(record.startDateTime).isSameOrBefore(alarmStartTimeUtc) &&
+            // Started on or after the beginning of the current day in UTC
             dayjs(record.startDateTime).isSameOrAfter(todayStartUtc)
         );
 
-        const hasEndJustification = serviceRecords.some(
+        // Confirms that a service record ended within the appropriate timeframe for the alarm's end.
+        const serviceHasEnded = serviceRecords.some(
           (record) =>
-            dayjs(record.endDateTime).isSameOrBefore(endTriggerTimeUtc) &&
+            // Ended on or before the alarm's end time
+            dayjs(record.endDateTime).isSameOrBefore(alarmEndTimeUtc) &&
+            // Ended on or after the beginning of the current day in UTC
             dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
         );
 
         logs.push(
-          `- Start justification: ${hasStartJustification}, End justification: ${hasEndJustification}`
+          `- Service Record has Started: ${serviceHasStarted}, has Ended: ${serviceHasEnded}`
         );
 
-        if (!hasStartJustification && !hasEndJustification) {
+        if (!serviceHasStarted || !serviceHasEnded) {
           logs.push(
-            `- No service records found for property ID ${property.id} during the scheduled time. Alarm justified.`
+            `- No service records found for property ID ${property.id} during the scheduled alarm time. > Trigger alarm.`
           );
         } else {
           logs.push(
-            `- Service records found for property ID ${property.id} during the scheduled time. Skipping alarm.`
+            `- ${serviceRecords.length} Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
           );
           continue;
         }
@@ -162,7 +181,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         logs.push(`- Alarm already notified today: ${hasBeenNotifiedToday}`);
 
         if (
-          currentTimeInTimezone.isAfter(startTriggerTime) &&
+          currentTimeInTimezone.isAfter(alarmStartTime) &&
           !alarm.startAlarmDisabled &&
           !hasBeenNotifiedToday
         ) {
@@ -174,7 +193,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         }
 
         if (
-          currentTimeInTimezone.isAfter(endTriggerTime) &&
+          currentTimeInTimezone.isAfter(alarmEndTime) &&
           !alarm.endAlarmDisabled &&
           !hasBeenNotifiedToday
         ) {
@@ -238,3 +257,28 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
     }
   },
 }));
+
+function getUtcDayRange(timezoneValue) {
+  // Validate the input timezone value
+  if (!timezoneValue) {
+    throw new Error(`Invalid timezone value: ${timezoneValue}`);
+  }
+
+  // Get the current date in the specified timezone
+  const nowInTimezone = dayjs().tz(timezoneValue);
+
+  // Calculate the start and end of the day in the specified timezone
+  const startOfDayInTimezone = nowInTimezone.startOf('day');
+  const endOfDayInTimezone = startOfDayInTimezone.add(1, 'day');
+
+  // Convert to UTC for the range
+  const startUtc = startOfDayInTimezone.utc().toISOString();
+  const endUtc = endOfDayInTimezone.utc().toISOString();
+
+  return {
+    timezoneStart: startOfDayInTimezone.format(), // Start time in the specified timezone
+    timezoneEnd: endOfDayInTimezone.format(), // End time in the specified timezone
+    utcStart: startUtc, // Start time in UTC
+    utcEnd: endUtc, // End time in UTC
+  };
+}
