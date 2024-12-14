@@ -1,13 +1,17 @@
-// @ts-nocheck
 'use strict';
 
 const { createCoreService } = require('@strapi/strapi').factories;
 const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc'); // Use CommonJS for imports
+const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
 
+// Extend Day.js with required plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
   async checkAlarms() {
@@ -28,8 +32,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         } active alarms.`
       );
 
-      const currentTimeUtc = dayjs.utc();
-
       for (const alarm of alarms) {
         const {
           id,
@@ -39,12 +41,14 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           endTimeDelay = 10,
           timezone: alarmTimezone = 'UTC',
           daysOfWeek,
+          property,
         } = alarm;
 
         logs.push(
           `----------------------------------------------------------------------------------------`
         );
 
+        const currentTimeUtc = dayjs.utc();
         const currentTimeInTimezone = currentTimeUtc.tz(alarmTimezone);
         const currentDay = currentTimeInTimezone.format('dddd');
 
@@ -62,48 +66,91 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           continue;
         }
 
-        let startTriggerTime, endTriggerTime;
-
-        // Parse and calculate start trigger time in the alarm's timezone
-        logs.push(`- Raw startTime: ${startTime}`);
-        if (startTime && /^\d{2}:\d{2}:\d{2}$/.test(startTime)) {
-          startTriggerTime = currentTimeInTimezone
-            .startOf('day')
-            .set('hour', parseInt(startTime.split(':')[0], 10))
-            .set('minute', parseInt(startTime.split(':')[1], 10))
-            .set('second', parseInt(startTime.split(':')[2], 10))
-            .add(startTimeDelay, 'minute');
-        } else {
-          logs.push(`- Invalid startTime: ${startTime}`);
-        }
-
-        // Parse and calculate end trigger time in the alarm's timezone
-        logs.push(`- Raw endTime: ${endTime}`);
-        if (endTime && /^\d{2}:\d{2}:\d{2}$/.test(endTime)) {
-          endTriggerTime = currentTimeInTimezone
-            .startOf('day')
-            .set('hour', parseInt(endTime.split(':')[0], 10))
-            .set('minute', parseInt(endTime.split(':')[1], 10))
-            .set('second', parseInt(endTime.split(':')[2], 10))
-            .add(endTimeDelay, 'minute');
-        } else {
-          logs.push(`- Invalid endTime: ${endTime}`);
-        }
+        // Calculate today's start in UTC based on the alarm's timezone
+        const todayStartUtc = dayjs()
+          .tz(alarmTimezone)
+          .startOf('day')
+          .utc()
+          .toISOString();
 
         logs.push(
-          `- Start trigger time (${alarmTimezone}): ${
-            startTriggerTime ? startTriggerTime.format() : 'Invalid Date'
-          }`
-        );
-        logs.push(
-          `- End trigger time (${alarmTimezone}): ${
-            endTriggerTime ? endTriggerTime.format() : 'Invalid Date'
-          }`
+          `- Today's date (UTC start based on alarm's timezone): ${todayStartUtc}`
         );
 
-        // Skip alarm if trigger times are invalid
-        if (!startTriggerTime || !endTriggerTime) {
-          logs.push(`- Skipping alarm ID ${id}: Invalid trigger times.`);
+        // Parse and calculate trigger times in the alarm's timezone
+        const startTriggerTime = dayjs
+          .tz(
+            `${currentTimeInTimezone.format('YYYY-MM-DD')}T${startTime}`,
+            alarmTimezone
+          )
+          .add(startTimeDelay, 'minute');
+
+        const endTriggerTime = dayjs
+          .tz(
+            `${currentTimeInTimezone.format('YYYY-MM-DD')}T${endTime}`,
+            alarmTimezone
+          )
+          .add(endTimeDelay, 'minute');
+
+        const startTriggerTimeUtc = startTriggerTime.utc().toISOString();
+        const endTriggerTimeUtc = endTriggerTime.utc().toISOString();
+
+        logs.push(
+          `- Start trigger time (UTC): ${startTriggerTimeUtc}, End trigger time (UTC): ${endTriggerTimeUtc}`
+        );
+
+        // Service record query using the corrected todayStartUtc
+        const query = {
+          where: {
+            property: property.id,
+            $or: [
+              {
+                startDateTime: {
+                  $lte: startTriggerTimeUtc,
+                  $gte: todayStartUtc,
+                },
+              },
+              {
+                endDateTime: {
+                  $lte: endTriggerTimeUtc,
+                  $gte: todayStartUtc,
+                },
+              },
+            ],
+          },
+        };
+
+        logs.push(`- Service record query: ${JSON.stringify(query)}`);
+
+        const serviceRecords = await strapi.db
+          .query('api::service-record.service-record')
+          .findMany(query);
+
+        // Separate checks for start and end justifications
+        const hasStartJustification = serviceRecords.some(
+          (record) =>
+            dayjs(record.startDateTime).isSameOrBefore(startTriggerTimeUtc) &&
+            dayjs(record.startDateTime).isSameOrAfter(todayStartUtc)
+        );
+
+        const hasEndJustification = serviceRecords.some(
+          (record) =>
+            dayjs(record.endDateTime).isSameOrBefore(endTriggerTimeUtc) &&
+            dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
+        );
+
+        logs.push(
+          `- Start justification: ${hasStartJustification}, End justification: ${hasEndJustification}`
+        );
+
+        if (!hasStartJustification && !hasEndJustification) {
+          logs.push(
+            `- No service records found for property ID ${property.id} during the scheduled time. Alarm justified.`
+          );
+        } else {
+          logs.push(
+            `- Service records found for property ID ${property.id} during the scheduled time. Skipping alarm.`
+          );
           continue;
         }
 
@@ -120,7 +167,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           !hasBeenNotifiedToday
         ) {
           logs.push(`- Conditions met for start alarm. Triggering now...`);
-          await strapi.service('api::alarm.alarm').triggerAlarm(alarm, 'start');
+          await this.triggerAlarm(alarm, 'start');
           logs.push(`- Start alarm triggered successfully for Alarm ID ${id}.`);
         } else {
           logs.push(`- Start alarm not triggered.`);
@@ -132,7 +179,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           !hasBeenNotifiedToday
         ) {
           logs.push(`- Conditions met for end alarm. Triggering now...`);
-          await strapi.service('api::alarm.alarm').triggerAlarm(alarm, 'end');
+          await this.triggerAlarm(alarm, 'end');
           logs.push(`- End alarm triggered successfully for Alarm ID ${id}.`);
         } else {
           logs.push(`- End alarm not triggered.`);
