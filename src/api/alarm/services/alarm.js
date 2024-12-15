@@ -23,7 +23,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       // Fetch active alarms with related properties and customers
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
         where: { active: true },
-        populate: { property: true, customer: true },
+        populate: { property: true, customer: true, service_type: true },
       });
 
       logs.push(
@@ -42,6 +42,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           timezone: alarmTimezone = 'UTC',
           daysOfWeek,
           property,
+          service_type: alarmServiceType,
         } = alarm;
 
         logs.push(
@@ -53,9 +54,9 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         const currentDay = currentTimeInTimezone.format('dddd');
 
         logs.push(
-          `- Alarm ID ${id}: Current time in alarm timezone (${alarmTimezone}): ${currentTimeInTimezone.format()}`
+          `- Alarm ID ${id}: Current timezone (${alarmTimezone}): ${currentTimeInTimezone.format()}`
         );
-        logs.push(`- Days configured for alarm: ${daysOfWeek.join(', ')}`);
+        logs.push(`- Alarm days: ${daysOfWeek.join(', ')}`);
         logs.push(`- Current day: ${currentDay}`);
 
         // Skip alarm if it's not scheduled for the current day
@@ -73,9 +74,9 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           .utc()
           .toISOString();
 
-        logs.push(
-          `- Today's date (UTC start based on alarm's timezone): ${todayStartUtc}`
-        );
+        // logs.push(
+        //   `- Today's date (UTC start based on alarm's timezone): ${todayStartUtc}`
+        // );
 
         // Parse and calculate trigger times in the alarm's timezone
         const alarmStartTime = dayjs
@@ -95,25 +96,15 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         const alarmStartTimeUtc = alarmStartTime.utc().toISOString();
         const alarmEndTimeUtc = alarmEndTime.utc().toISOString();
 
-        logs.push(
-          `- Alarm Start Time (UTC): ${alarmStartTimeUtc}, End Time (UTC): ${alarmEndTimeUtc}`
-        );
-
-        // const utcDayRange = getUtcDayRange(alarmTimezone);
-        // logs.push(`- Get UTC day range for: ${alarmTimezone}`);
-        // logs.push(utcDayRange);
-
-        // logs.push(
-        //   `- UTC day range for alarm timezone: ${utcDayRange.utcStart} to ${utcDayRange.utcEnd}`
-        // );
-        // logs.push(
-        //   `- Day range for alarm timezone: ${utcDayRange.timezoneStart} to ${utcDayRange.timezoneEnd}`
-        // );
+        logs.push(`- Alarm Start Time (UTC): ${alarmStartTimeUtc}`);
+        logs.push(`- Alarm End Time (UTC): ${alarmEndTimeUtc}`);
 
         // Service record query using the corrected todayStartUtc
         const query = {
           where: {
             property: property.id,
+            service_type: alarmServiceType?.id, // Add service type filtering
+            // Add service person filtering
             $or: [
               {
                 startDateTime: {
@@ -129,16 +120,34 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
               },
             ],
           },
+          populate: {
+            service_type: true, // Ensure service_type is included in the results
+          },
         };
 
-        logs.push(`- Service record query:`);
-        logs.push(query);
+        // logs.push(`- Service record query:`);
+        // logs.push(query);
 
         const serviceRecords = await strapi.db
           .query('api::service-record.service-record')
           .findMany(query);
-        logs.push(`- Service record result:`);
-        logs.push(serviceRecords);
+
+        // logs.push(`- Service record result:`);
+        // logs.push(serviceRecords);
+
+        // Confirms that a service record has the correct service type
+        const serviceMatches = serviceRecords.some((record) => {
+          const recordServiceTypeId = record?.service_type?.id;
+          const alarmServiceTypeId = alarmServiceType?.id;
+
+          return (
+            recordServiceTypeId &&
+            alarmServiceTypeId &&
+            recordServiceTypeId === alarmServiceTypeId
+          );
+        });
+
+        logs.push(`- Service type match: ${serviceMatches}`);
 
         // Confirms that a service record started within the appropriate timeframe for the alarm's start.
         const serviceHasStarted = serviceRecords.some(
@@ -158,50 +167,20 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
         );
 
-        logs.push(
-          `- Service Record has Started: ${serviceHasStarted}, has Ended: ${serviceHasEnded}`
-        );
+        logs.push(`- Service Record Started On Time: ${serviceHasStarted}`);
+        logs.push(`- Service Record Ended On Time: ${serviceHasEnded}`);
 
-        if (!serviceHasStarted || !serviceHasEnded) {
+        // Adjust alarm triggering logic based on the match
+        if (!serviceMatches || !serviceHasStarted || !serviceHasEnded) {
           logs.push(
-            `- No service records found for property ID ${property.id} during the scheduled alarm time. > Trigger alarm.`
+            `- No matching service record found or missing start/end justification for property ID ${property.id}. > Trigger alarm.`
           );
+          await this.triggerAlarm(alarm, 'start');
         } else {
           logs.push(
-            `- ${serviceRecords.length} Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
+            `- ${serviceRecords.length} matching Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
           );
           continue;
-        }
-
-        // Check notification and trigger conditions
-        const hasBeenNotifiedToday =
-          alarm.notified &&
-          dayjs(alarm.notified).isSame(currentTimeInTimezone, 'day');
-
-        logs.push(`- Alarm already notified today: ${hasBeenNotifiedToday}`);
-
-        if (
-          currentTimeInTimezone.isAfter(alarmStartTime) &&
-          !alarm.startAlarmDisabled &&
-          !hasBeenNotifiedToday
-        ) {
-          logs.push(`- Conditions met for start alarm. Triggering now...`);
-          await this.triggerAlarm(alarm, 'start');
-          logs.push(`- Start alarm triggered successfully for Alarm ID ${id}.`);
-        } else {
-          logs.push(`- Start alarm not triggered.`);
-        }
-
-        if (
-          currentTimeInTimezone.isAfter(alarmEndTime) &&
-          !alarm.endAlarmDisabled &&
-          !hasBeenNotifiedToday
-        ) {
-          logs.push(`- Conditions met for end alarm. Triggering now...`);
-          await this.triggerAlarm(alarm, 'end');
-          logs.push(`- End alarm triggered successfully for Alarm ID ${id}.`);
-        } else {
-          logs.push(`- End alarm not triggered.`);
         }
       }
 

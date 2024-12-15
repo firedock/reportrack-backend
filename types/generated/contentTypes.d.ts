@@ -422,17 +422,6 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
       'oneToOne',
       'api::customer.customer'
     >;
-    day: Attribute.Enumeration<
-      [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday'
-      ]
-    >;
     daysOfWeek: Attribute.JSON;
     endAlarmDisabled: Attribute.Boolean;
     endTime: Attribute.Time;
