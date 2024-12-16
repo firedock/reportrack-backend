@@ -67,6 +67,18 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           continue;
         }
 
+        // Check notification and trigger conditions
+        const hasBeenNotifiedToday =
+          alarm.notified &&
+          dayjs(alarm.notified).isSame(currentTimeInTimezone, 'day');
+
+        logs.push(`- Alarm already notified today: ${hasBeenNotifiedToday}`);
+
+        if (hasBeenNotifiedToday) {
+          logs.push(`- Skipping alarm ID ${id}: Already notified today.`);
+          continue;
+        }
+
         // Calculate today's start in UTC based on the alarm's timezone
         const todayStartUtc = dayjs()
           .tz(alarmTimezone)
@@ -98,6 +110,12 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
         logs.push(`- Alarm Start Time (UTC): ${alarmStartTimeUtc}`);
         logs.push(`- Alarm End Time (UTC): ${alarmEndTimeUtc}`);
+
+        // Check if the alarm is past due
+        if (currentTimeUtc.isBefore(alarmStartTimeUtc)) {
+          logs.push(`- Skipping alarm ID ${id}: Alarm is not past due yet.`);
+          continue;
+        }
 
         // Service record query using the corrected todayStartUtc
         const query = {
@@ -215,10 +233,18 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
       // Send notification to all property users
       for (const user of users) {
-        console.log('email user', user);
-        // Uncomment the email logic once ready
-        // await strapi.plugins['email'].services.email.send({
+        // console.log('email user', user);
+        console.log('email', {
+          to: user.email,
+          subject: `Alarm ${type} Notification for ${property.name}`,
+          text: `The ${type} alarm for property "${property.name}" (Customer: ${
+            customer?.name || 'N/A'
+          }) has been triggered.`,
+        });
+
+        // strapi.plugins['email'].services.email.send({
         //   to: user.email,
+        //   from: 'robert@firedock.com', //e.g. single sender verification in SendGrid
         //   subject: `Alarm ${type} Notification for ${property.name}`,
         //   text: `The ${type} alarm for property "${property.name}" (Customer: ${
         //     customer?.name || 'N/A'
