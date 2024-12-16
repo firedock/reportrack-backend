@@ -1,26 +1,32 @@
-module.exports = {
-  // Existing job
-  twoMinuteJob: {
-    task: ({ strapi }) => {
-      const timestamp = new Date().toISOString();
-      console.log(`${timestamp}: Cron job executed every 2 minutes`);
-    },
-    options: {
-      rule: '*/2 * * * *',
-      tz: 'America/Los_Angeles',
-    },
-  },
+const axios = require('axios');
 
-  // New job that runs every minute
+module.exports = {
+  // Cron job to trigger alarms every minute
   oneMinuteJob: {
-    task: ({ strapi }) => {
+    task: async ({ strapi }) => {
       const timestamp = new Date().toISOString();
       console.log(`${timestamp}: Cron job executed every minute`);
+      const alarmTriggerUrl = `${process.env.PUBLIC_URL}/api/alarms/trigger`;
+
+      try {
+        const response = await axios.post(
+          alarmTriggerUrl,
+          {}, // No payload
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.ADMIN_API_TOKEN}`,
+            },
+          }
+        );
+        console.log('API response:', response.data);
+      } catch (error) {
+        console.error('Error triggering alarm API:', error.message);
+        console.error('Full error details:', error.response?.data || error);
+      }
     },
     options: {
       rule: '* * * * *', // Every minute
-      // Optionally, you can set a timezone as well
-      // tz: 'Your_Timezone',
+      tz: 'America/Los_Angeles', // Set timezone if needed
     },
   },
 };
