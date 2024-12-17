@@ -53,7 +53,7 @@ module.exports = createCoreService(
             },
           ],
         };
-        // console.log('Show Associated', userFilters);
+        // console.log('Show Associated', doAssociatedFilter);
       }
 
       // Set up query options with pagination, sorting, and user filters

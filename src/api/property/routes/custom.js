@@ -5,7 +5,7 @@ module.exports = {
       path: '/properties/custom/count',
       handler: 'property.count',
       config: {
-        auth: false,
+        // policies: ['global::isOwner'],
       },
     },
     {
@@ -13,8 +13,14 @@ module.exports = {
       path: '/properties/custom/locationScan',
       handler: 'property.locationScans',
       config: {
-        auth: false,
+        // policies: ['global::isOwner'],
       },
+    },
+    {
+      method: 'GET',
+      path: '/properties/custom/customer/:id',
+      handler: 'property.findByCustomer',
+      config: {},
     },
   ],
 };

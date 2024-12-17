@@ -9,8 +9,43 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController(
   'api::property.property',
   ({ strapi }) => ({
-    async alarms(ctx) {
-      // get all alarms from properties
+    async find(ctx) {
+      console.log('Authenticated User:', ctx.state.user.username); // Debug the user context
+
+      if (!ctx.state.user) {
+        return ctx.badRequest('User is not authenticated.');
+      }
+
+      const user = ctx.state.user; // Get the authenticated user
+      const records = await strapi
+        .service('api::property.property')
+        .findPropertiesByUser(user, ctx.query);
+
+      return ctx.send(records); // Return the filtered properties
+    },
+    async findByCustomer(ctx) {
+      const { id } = ctx.params; // Get the customer ID from URL params
+
+      if (!id) {
+        return ctx.badRequest('Customer ID is required');
+      }
+
+      try {
+        const properties = await strapi.entityService.findMany(
+          'api::property.property',
+          {
+            filters: {
+              customer: { id: id }, // Filter properties by customer ID
+            },
+            populate: ['customer'],
+          }
+        );
+
+        ctx.send({ data: properties });
+      } catch (error) {
+        // @ts-ignore
+        ctx.internalServerError('Failed to fetch properties', error);
+      }
     },
     async count(ctx) {
       try {

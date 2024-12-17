@@ -233,23 +233,26 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
       // Send notification to all property users
       for (const user of users) {
-        // console.log('email user', user);
-        console.log('email', {
+        const emailData = {
           to: user.email,
+          from: 'noreply@reportrack.com', // Matches the authenticated user
           subject: `Alarm ${type} Notification for ${property.name}`,
           text: `The ${type} alarm for property "${property.name}" (Customer: ${
             customer?.name || 'N/A'
           }) has been triggered.`,
-        });
+        };
 
-        // strapi.plugins['email'].services.email.send({
-        //   to: user.email,
-        //   from: 'robert@firedock.com', //e.g. single sender verification in SendGrid
-        //   subject: `Alarm ${type} Notification for ${property.name}`,
-        //   text: `The ${type} alarm for property "${property.name}" (Customer: ${
-        //     customer?.name || 'N/A'
-        //   }) has been triggered.`,
-        // });
+        console.log('email', emailData);
+
+        try {
+          await strapi.plugins['email'].services.email.send(emailData);
+          console.log(`Email sent to ${user.email}`);
+        } catch (error) {
+          console.error(
+            `Failed to send email to ${user.email}:`,
+            error.message
+          );
+        }
       }
 
       // Update the notified field with the current timestamp
