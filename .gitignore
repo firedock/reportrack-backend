@@ -121,3 +121,4 @@ build
 
 # dev
 dev.md
+.vscode/*
