@@ -31,8 +31,9 @@
     },
     "property": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::property.property"
+      "relation": "manyToOne",
+      "target": "api::property.property",
+      "inversedBy": "service_records"
     },
     "customer": {
       "type": "relation",
@@ -44,8 +45,9 @@
     },
     "service_type": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::service-type.service-type"
+      "relation": "manyToOne",
+      "target": "api::service-type.service-type",
+      "inversedBy": "service_records"
     },
     "locationScans": {
       "type": "json"

@@ -43,6 +43,18 @@
       "relation": "manyToMany",
       "target": "plugin::users-permissions.user",
       "mappedBy": "properties"
+    },
+    "service_records": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::service-record.service-record",
+      "mappedBy": "property"
+    },
+    "work_orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::work-order.work-order",
+      "mappedBy": "property"
     }
   }
 }

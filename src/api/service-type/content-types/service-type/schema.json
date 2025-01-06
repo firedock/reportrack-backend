@@ -38,6 +38,12 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::account.account"
+    },
+    "service_records": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::service-record.service-record",
+      "mappedBy": "service_type"
     }
   }
 }

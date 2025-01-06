@@ -8,8 +8,7 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": false,
-    "populateCreatorFields": true
+    "draftAndPublish": false
   },
   "pluginOptions": {},
   "attributes": {
@@ -29,15 +28,21 @@
     },
     "property": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::property.property"
+      "relation": "manyToOne",
+      "target": "api::property.property",
+      "inversedBy": "work_orders"
     },
     "dueBy": {
       "type": "datetime"
     },
     "status": {
       "type": "enumeration",
-      "enum": ["New", "Open", "In Progress", "Complete"]
+      "enum": [
+        "New",
+        "Open",
+        "In Progress",
+        "Complete"
+      ]
     },
     "private": {
       "type": "boolean"

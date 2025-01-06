@@ -634,6 +634,11 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
     >;
     locationScans: Attribute.JSON;
     name: Attribute.String & Attribute.Required;
+    service_records: Attribute.Relation<
+      'api::property.property',
+      'oneToMany',
+      'api::service-record.service-record'
+    >;
     service_types: Attribute.Relation<
       'api::property.property',
       'oneToMany',
@@ -650,6 +655,11 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'api::property.property',
       'manyToMany',
       'plugin::users-permissions.user'
+    >;
+    work_orders: Attribute.Relation<
+      'api::property.property',
+      'oneToMany',
+      'api::work-order.work-order'
     >;
   };
 }
@@ -699,12 +709,12 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
     note: Attribute.Text;
     property: Attribute.Relation<
       'api::service-record.service-record',
-      'oneToOne',
+      'manyToOne',
       'api::property.property'
     >;
     service_type: Attribute.Relation<
       'api::service-record.service-record',
-      'oneToOne',
+      'manyToOne',
       'api::service-type.service-type'
     >;
     startDateTime: Attribute.DateTime & Attribute.Required;
@@ -751,6 +761,11 @@ export interface ApiServiceTypeServiceType extends Schema.CollectionType {
     requireScanAtEnd: Attribute.Boolean;
     scanReminders: Attribute.Integer;
     service: Attribute.String & Attribute.Required;
+    service_records: Attribute.Relation<
+      'api::service-type.service-type',
+      'oneToMany',
+      'api::service-record.service-record'
+    >;
     showEndTime: Attribute.Boolean;
     showLocation: Attribute.Boolean;
     showStartTime: Attribute.Boolean;
@@ -774,7 +789,6 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
   };
   options: {
     draftAndPublish: false;
-    populateCreatorFields: true;
   };
   attributes: {
     account: Attribute.Relation<
@@ -787,7 +801,8 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'api::work-order.work-order',
       'oneToOne',
       'admin::user'
-    >;
+    > &
+      Attribute.Private;
     customer: Attribute.Relation<
       'api::work-order.work-order',
       'oneToOne',
@@ -797,7 +812,7 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
     private: Attribute.Boolean;
     property: Attribute.Relation<
       'api::work-order.work-order',
-      'oneToOne',
+      'manyToOne',
       'api::property.property'
     >;
     status: Attribute.Enumeration<['New', 'Open', 'In Progress', 'Complete']>;
@@ -807,7 +822,8 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'api::work-order.work-order',
       'oneToOne',
       'admin::user'
-    >;
+    > &
+      Attribute.Private;
   };
 }
 
