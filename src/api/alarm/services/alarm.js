@@ -104,14 +104,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         const alarmStartTimeUtc = alarmStartTime.utc().toISOString();
         const alarmEndTimeUtc = alarmEndTime.utc().toISOString();
 
-        // logs.push(`- Alarm Start Time (UTC): ${alarmStartTimeUtc}`);
-        // logs.push(`- Alarm End Time (UTC): ${alarmEndTimeUtc}`);
-
         // Log alarm times in the alarm's timezone
-        const alarmStartTimeLocal = alarmStartTime.format('YYYY-MM-DD hh:mm A');
-        const alarmEndTimeLocal = alarmEndTime.format('YYYY-MM-DD hh:mm A');
+        const alarmStartTimeLocal = alarmStartTime.format('MM/DD/YYYY hh:mm A');
+        const alarmEndTimeLocal = alarmEndTime.format('MM/DD/YYYY hh:mm A');
 
-        // Add logs for local times
         logs.push(`- Alarm Start Time (Local): ${alarmStartTimeLocal}`);
         logs.push(`- Alarm End Time (Local): ${alarmEndTimeLocal}`);
 
@@ -130,14 +126,12 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             service_type: alarmServiceType?.id,
             $or: [
               {
-                // Match records that start within the alarm's adjusted timeframe
                 startDateTime: {
                   $lte: alarmStartTimeUtc, // Use alarmStartTimeUtc as is
                   $gte: todayStartUtc,
                 },
               },
               {
-                // Match records that end within the alarm's adjusted timeframe
                 endDateTime: {
                   $lte: alarmEndTimeUtc, // Use alarmEndTimeUtc as is
                   $gte: todayStartUtc,
@@ -153,6 +147,16 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         const serviceRecords = await strapi.db
           .query('api::service-record.service-record')
           .findMany(query);
+
+        logs.push(
+          `- Service Records: ${JSON.stringify(
+            serviceRecords.map((record) => ({
+              id: record.id,
+              startDateTime: record.startDateTime,
+              endDateTime: record.endDateTime,
+            }))
+          )}`
+        );
 
         const serviceMatches = serviceRecords.some((record) => {
           const recordServiceTypeId = record?.service_type?.id;
@@ -173,6 +177,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
         const serviceHasEnded = serviceRecords.some(
           (record) =>
+            record.endDateTime && // Ensure endDateTime exists
             dayjs(record.endDateTime).isSameOrBefore(alarmEndTimeUtc) &&
             dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
         );
@@ -181,7 +186,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         logs.push(`- Service Record Started On Time: ${serviceHasStarted}`);
         logs.push(`- Service Record Ended On Time: ${serviceHasEnded}`);
 
-        if (!serviceMatches || !serviceHasStarted || !serviceHasEnded) {
+        if (!serviceMatches || (!serviceHasStarted && !serviceHasEnded)) {
           logs.push(
             `- No matching service record found or missing start/end justification for property ID ${property.id}. > Trigger alarm.`
           );
@@ -255,7 +260,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         return;
       }
 
-      // Format service records into an HTML table with timezone conversion
       const serviceRecordsDetails =
         serviceRecordsForDay.length > 0
           ? `
@@ -271,16 +275,17 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       <tbody>
         ${serviceRecordsForDay
           .map((record) => {
-            // Convert service record times to the alarm's timezone
             const startTimeLocal = dayjs
-              .utc(record.startDateTime) // Treat as UTC
-              .tz(timezone) // Convert to the alarm's timezone
+              .utc(record.startDateTime)
+              .tz(timezone)
               .format('MM/DD/YYYY hh:mm:ss A');
 
-            const endTimeLocal = dayjs
-              .utc(record.endDateTime) // Treat as UTC
-              .tz(timezone) // Convert to the alarm's timezone
-              .format('MM/DD/YYYY hh:mm:ss A');
+            const endTimeLocal = record.endDateTime
+              ? dayjs
+                  .utc(record.endDateTime)
+                  .tz(timezone)
+                  .format('MM/DD/YYYY hh:mm:ss A')
+              : 'N/A';
 
             return `
             <tr>
@@ -297,15 +302,14 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
   `
           : '<p>No service records found for today.</p>';
 
-      // Alarm times in local timezone with delays applied
       const alarmStartLocal = dayjs
         .tz(`${dayjs().format('YYYY-MM-DD')}T${startTime}`, timezone)
-        .add(startTimeDelay, 'minute') // Apply start time delay
+        .add(startTimeDelay, 'minute')
         .format('MM/DD/YYYY hh:mm A');
 
       const alarmEndLocal = dayjs
         .tz(`${dayjs().format('YYYY-MM-DD')}T${endTime}`, timezone)
-        .add(endTimeDelay, 'minute') // Apply end time delay
+        .add(endTimeDelay, 'minute')
         .format('MM/DD/YYYY hh:mm A');
 
       const emailContent = {
@@ -319,6 +323,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           
           <h3>Alarm Details:</h3>
           <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td><strong>Alarm ID</strong></td>
+              <td>${alarm.id}</td>
+            </tr>
             <tr>
               <td><strong>Alarm Timezone</strong></td>
               <td>${timezone || 'UTC'}</td>
@@ -356,7 +364,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
       const globalAlarmEmail = 'robert@firedock.com'; // Replace with your desired email
 
-      // Send to associated users
       const users = await strapi.db
         .query('plugin::users-permissions.user')
         .findMany({
@@ -383,7 +390,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         }
       }
 
-      // Send to global alarm recipient
       const globalEmailData = {
         ...emailContent,
         to: globalAlarmEmail,
@@ -400,7 +406,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         );
       }
 
-      // Update the notified field
       await strapi.db.query('api::alarm.alarm').update({
         where: { id: alarm.id },
         data: { notified: dayjs.utc().toISOString() },
