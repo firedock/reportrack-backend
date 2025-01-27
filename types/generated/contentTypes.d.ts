@@ -417,6 +417,7 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
       'admin::user'
     > &
       Attribute.Private;
+    createdByRole: Attribute.String;
     customer: Attribute.Relation<
       'api::alarm.alarm',
       'oneToOne',

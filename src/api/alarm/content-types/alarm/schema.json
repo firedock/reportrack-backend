@@ -63,6 +63,11 @@
       "type": "string",
       "default": "UTC",
       "required": true
+    },
+    "createdByRole": {
+      "type": "string",
+      "required": false,
+      "description": "The role of the user who created this alarm (e.g., Admin, Customer)"
     }
   }
 }
