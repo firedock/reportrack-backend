@@ -8,7 +8,11 @@ module.exports = (plugin) => {
   (plugin.controllers.user.create = async (ctx) => {
     try {
       // Validate incoming user data
-      const { email, username, role } = ctx.request.body;
+      const { email, username, role, password } = ctx.request.body;
+
+      if (!password) {
+        throw new ValidationError('Password is required');
+      }
 
       // Check for duplicate username
       const userWithSameUsername = await strapi
@@ -34,10 +38,14 @@ module.exports = (plugin) => {
         }
       }
 
+      // Hash the password before storing it
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       // Create user object
       const newUser = {
         ...ctx.request.body,
         email: email.toLowerCase(),
+        password: hashedPassword, // Store hashed password
         provider: 'local',
       };
 
