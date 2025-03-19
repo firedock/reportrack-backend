@@ -176,8 +176,7 @@ module.exports = (plugin) => {
         ctx.status = error.status || 400;
         ctx.body = { error: { status: ctx.status, message: errorMessage } };
       }
-    }),
-    // find
+    }), // Find users with customers inferred from their properties
     (plugin.controllers.user.find = async (ctx) => {
       try {
         const { page = 1, pageSize = 25 } = ctx.query.pagination || {};
@@ -189,10 +188,17 @@ module.exports = (plugin) => {
           offset: (parseInt(page, 10) - 1) * parseInt(pageSize, 10),
           orderBy: sort ? { [sort.split(':')[0]]: sort.split(':')[1] } : {},
           where: filters || {},
-          populate: ['role', 'customers', 'properties'],
+          populate: {
+            role: true,
+            properties: {
+              populate: {
+                customer: true, // Populate customer from properties
+              },
+            },
+          },
         };
 
-        // Fetch users with pagination, sorting, and filtering
+        // Fetch users with properties and their related customers
         const users = await strapi
           .query('plugin::users-permissions.user')
           .findMany(queryOptions);
@@ -205,13 +211,24 @@ module.exports = (plugin) => {
         // Calculate pagination details
         const pageCount = Math.ceil(totalUsers / parseInt(pageSize, 10));
 
-        // Sanitize user data
+        // Process users to infer customers from properties safely
         const sanitizedUsers = await Promise.all(
           users.map(async (user) => {
             const sanitizedUser = await sanitize.contentAPI.output(
               user,
               strapi.getModel('plugin::users-permissions.user')
             );
+
+            // Safely extract unique customers from properties
+            const uniqueCustomers = sanitizedUser.properties
+              .filter((prop) => prop.customer) // Ensure customer exists
+              .map((prop) => prop.customer)
+              .filter(
+                (customer, index, self) =>
+                  customer &&
+                  self.findIndex((c) => c.id === customer.id) === index
+              );
+
             return {
               id: sanitizedUser.id,
               attributes: {
@@ -224,7 +241,7 @@ module.exports = (plugin) => {
                 updatedAt: sanitizedUser.updatedAt,
                 name: sanitizedUser.name,
                 role: sanitizedUser.role,
-                customers: sanitizedUser.customers,
+                customers: uniqueCustomers, // Customers inferred from properties
                 properties: sanitizedUser.properties,
               },
             };
