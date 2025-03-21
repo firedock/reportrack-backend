@@ -10,8 +10,6 @@ module.exports = createCoreController(
   'api::property.property',
   ({ strapi }) => ({
     async find(ctx) {
-      console.log('Authenticated User:', ctx.state.user.username); // Debug the user context
-
       if (!ctx.state.user) {
         return ctx.badRequest('User is not authenticated.');
       }

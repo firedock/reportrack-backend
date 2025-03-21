@@ -21,13 +21,12 @@ module.exports = createCoreService(
 
       if (userRole === 'Customer') {
         userFilters = {
-          customer: {
+          property: {
             users: {
               id: { $eq: user.id },
             },
           },
         };
-        // console.log('Customer Filters', userFilters);
       } else if (userRole === 'Service Person') {
         userFilters = { users_permissions_user: user.id };
         // console.log('Service Person Filters', userFilters);

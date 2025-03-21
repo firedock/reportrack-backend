@@ -31,12 +31,6 @@
       "relation": "oneToOne",
       "target": "api::account.account"
     },
-    "users": {
-      "type": "relation",
-      "relation": "manyToMany",
-      "target": "plugin::users-permissions.user",
-      "mappedBy": "customers"
-    },
     "properties": {
       "type": "relation",
       "relation": "oneToMany",
@@ -45,6 +39,12 @@
     },
     "oid": {
       "type": "uid"
+    },
+    "users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "customers"
     }
   }
 }

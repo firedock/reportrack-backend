@@ -8,34 +8,34 @@ module.exports = createCoreService('api::property.property', ({ strapi }) => ({
     const pageSize = queryParams?.pagination?.pageSize || 10;
     const filters = queryParams?.filters || {};
     const doAssociatedFilter = queryParams?.showAssociatedOnly === 'true';
-
-    // const userRole = user?.role?.name;
+    const searchTerm = queryParams?.search || ''; // Extract search term
 
     let userFilters = {};
 
-    // If "Show Associated" is toggled, combine filters for both roles
     if (doAssociatedFilter) {
       userFilters = {
         $or: [
           { users: { id: user.id } }, // For Subscribers
-          {
-            customer: {
-              users: {
-                id: { $eq: user.id },
-              },
-            },
-          }, // For Customers
+          { customer: { users: { id: user.id } } }, // For Customers
         ],
       };
     }
 
-    // Build query options
+    let searchFilters = {};
+    if (searchTerm) {
+      searchFilters = {
+        $or: [
+          { name: { $containsi: searchTerm } }, // Search by property name
+          { customer: { name: { $containsi: searchTerm } } }, // Search by customer name
+        ],
+      };
+    }
+
     const queryOptions = {
-      filters: { ...userFilters, ...filters },
+      filters: { ...userFilters, ...filters, ...searchFilters },
       populate: {
         users: true,
-        customer: true, // customer refers to a singular relationship field on the Property content type.
-        customers: { populate: ['users'] }, // customers implies a plural relationship or nested population, which includes users related to those customers
+        customer: true,
       },
       pagination: {
         page,
@@ -43,9 +43,6 @@ module.exports = createCoreService('api::property.property', ({ strapi }) => ({
       },
     };
 
-    // console.log('Query Options:', JSON.stringify(queryOptions, null, 2));
-
-    // Fetch properties and total count
     const result = await strapi.entityService.findMany(
       'api::property.property',
       queryOptions
@@ -53,9 +50,7 @@ module.exports = createCoreService('api::property.property', ({ strapi }) => ({
 
     const totalCount = await strapi.entityService.count(
       'api::property.property',
-      {
-        filters: { ...userFilters, ...filters },
-      }
+      { filters: { ...userFilters, ...filters, ...searchFilters } }
     );
 
     return {

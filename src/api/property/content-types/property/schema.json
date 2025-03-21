@@ -38,12 +38,6 @@
     "locationScans": {
       "type": "json"
     },
-    "users": {
-      "type": "relation",
-      "relation": "manyToMany",
-      "target": "plugin::users-permissions.user",
-      "mappedBy": "properties"
-    },
     "service_records": {
       "type": "relation",
       "relation": "oneToMany",
@@ -55,6 +49,12 @@
       "relation": "oneToMany",
       "target": "api::work-order.work-order",
       "mappedBy": "property"
+    },
+    "users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "properties"
     }
   }
 }

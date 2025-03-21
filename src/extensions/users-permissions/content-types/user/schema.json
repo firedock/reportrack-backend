@@ -70,18 +70,18 @@
       "relation": "oneToOne",
       "target": "api::account.account"
     },
-    "customers": {
-      "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::customer.customer",
-      "inversedBy": "users"
-    },
     "name": {
       "type": "string",
       "required": true
     },
     "oid": {
       "type": "string"
+    },
+    "customers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::customer.customer",
+      "inversedBy": "users"
     },
     "properties": {
       "type": "relation",

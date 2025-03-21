@@ -21,7 +21,7 @@ module.exports = createCoreService(
 
       if (userRole === 'Customer') {
         userFilters = {
-          customer: {
+          property: {
             users: {
               id: { $eq: user.id },
             },
