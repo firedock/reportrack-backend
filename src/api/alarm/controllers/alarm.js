@@ -10,21 +10,31 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
   async count(ctx) {
     try {
-      // Extract filters from the context if provided
-      const { filters } = ctx.query || {};
+      const { filters = {} } = ctx.query;
+      const user = ctx.state.user;
+      const userRole = user?.role?.name;
 
-      // Fetch total count of with optional filters
+      if (userRole === 'Customer') {
+        const userProperties = await strapi.db
+          .query('api::property.property')
+          .findMany({
+            where: { users: { id: user.id } },
+            select: ['id'],
+          });
+
+        const allowedPropertyIds = userProperties.map((p) => p.id);
+
+        filters.property = {
+          id: { $in: allowedPropertyIds },
+        };
+      }
+
       const total = await strapi
         .query('api::alarm.alarm')
         .count({ where: filters });
 
-      // Prepare the response
-      const response = { count: total };
-
-      // Send the response
-      ctx.send(response);
+      ctx.send({ count: total });
     } catch (error) {
-      // Send the error response
       ctx.send({ error: error.message });
     }
   },
@@ -60,34 +70,50 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
   },
   async getAllAlarms(ctx) {
     try {
-      // Extract optional query parameters for filtering, sorting, and pagination
       const {
-        filters,
+        filters = {},
         sort,
         page = 1,
         pageSize = 10,
         populate = '*',
       } = ctx.query;
 
-      // Convert 'populate=*' to an object for all relations
+      const user = ctx.state.user;
+      const userRole = user?.role?.name;
+
+      // If the user is a customer, restrict to associated properties
+      if (userRole === 'Customer') {
+        // First, fetch property IDs associated with this user
+        const userProperties = await strapi.db
+          .query('api::property.property')
+          .findMany({
+            where: { users: { id: user.id } },
+            select: ['id'],
+          });
+
+        const allowedPropertyIds = userProperties.map((p) => p.id);
+
+        // Apply a filter to only return alarms for those properties
+        filters.property = {
+          id: { $in: allowedPropertyIds },
+        };
+      }
+
       const populateOption =
         populate === '*' ? { property: true, customer: true } : populate;
 
-      // Fetch alarms with pagination and populate relations
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
-        where: filters || {}, // Apply filters if provided
-        orderBy: sort || { createdAt: 'desc' }, // Default sorting by creation date descending
+        where: filters,
+        orderBy: sort || { createdAt: 'desc' },
         limit: pageSize,
         offset: (page - 1) * pageSize,
-        populate: populateOption, // Populate relations (converted object)
+        populate: populateOption,
       });
 
-      // Count total alarms for pagination metadata
       const total = await strapi.db.query('api::alarm.alarm').count({
-        where: filters || {},
+        where: filters,
       });
 
-      // Send response with alarms and pagination metadata
       return ctx.send({
         data: alarms,
         meta: {
