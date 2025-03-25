@@ -356,20 +356,39 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
       // Notification Logic Based on `createdByRole`
       if (createdByRole === 'Customer') {
-        // Notify the customer who created the alarm
-        if (customer && customer.email) {
-          const emailData = {
-            ...emailContent,
-            to: customer.email,
-            from: 'noreply@reportrack.com',
-          };
+        // Look up customer user associated with the property
+        const customerUsers = await strapi.db
+          .query('plugin::users-permissions.user')
+          .findMany({
+            where: {
+              properties: property.id,
+              role: { name: 'Customer' }, // adjust if role matching is different
+            },
+            populate: ['role'],
+          });
 
-          try {
-            await strapi.plugins['email'].services.email.send(emailData);
-            console.log(`Email sent to customer: ${customer.email}`);
-          } catch (error) {
-            console.error(`Failed to send email to customer:`, error.message);
+        if (customerUsers && customerUsers.length > 0) {
+          for (const user of customerUsers) {
+            const emailData = {
+              ...emailContent,
+              to: user.email,
+              from: 'noreply@reportrack.com',
+            };
+
+            try {
+              await strapi.plugins['email'].services.email.send(emailData);
+              console.log(`Email sent to customer user: ${user.email}`);
+            } catch (error) {
+              console.error(
+                `Failed to send email to customer user:`,
+                error.message
+              );
+            }
           }
+        } else {
+          console.warn(
+            `No customer user found for alarm ${alarm.id} and property ${property.id}`
+          );
         }
       } else {
         const globalAlarmEmail = 'robert@firedock.com'; // Replace with your desired email
