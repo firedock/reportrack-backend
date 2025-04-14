@@ -8,5 +8,17 @@ module.exports = {
         auth: false,
       },
     },
+    {
+      method: 'GET',
+      path: '/customers/custom/customer-users-without-properties',
+      handler: 'customer.getCustomerUsersWithoutProperties',
+      config: {},
+    },
+    {
+      method: 'GET',
+      path: '/customers/custom/customers-without-properties',
+      handler: 'customer.getCustomersWithoutProperties',
+      config: {},
+    },
   ],
 };

@@ -1,0 +1,95 @@
+[
+  {
+    "id": 119,
+    "adjusted_start_time": "12:00:00",
+    "adjusted_end_time": "13:00:00",
+    "notified": "2025-03-23 19:00:00.399",
+    "created_by_role": "Customer",
+    "property_id": 89,
+    "property_name": "Del Pueblo Plaza",
+    "service_type_name": "Day Porter Service",
+    "service_records_today": [
+      {
+        "id": 6175,
+        "start_date_time": "2025-03-24T08:34:36.471",
+        "end_date_time": "2025-03-24T12:00:17.8",
+        "created_at": "2025-03-24T08:34:36.718",
+        "updated_at": "2025-03-24T12:00:17.872"
+      }
+    ],
+    "linked_users": [
+      {
+        "id": 5,
+        "username": "smendoza",
+        "email": "smendoza@twsfs.com"
+      },
+      {
+        "id": 11,
+        "username": "dfernandez",
+        "email": "dfernandez@twsfs.com"
+      }
+    ]
+  },
+  {
+    "id": 120,
+    "adjusted_start_time": "10:00:00",
+    "adjusted_end_time": "11:00:00",
+    "notified": "2025-03-20 17:00:00.395",
+    "created_by_role": "Customer",
+    "property_id": 89,
+    "property_name": "Del Pueblo Plaza",
+    "service_type_name": "Day Porter Service",
+    "service_records_today": [
+      {
+        "id": 6175,
+        "start_date_time": "2025-03-24T08:34:36.471",
+        "end_date_time": "2025-03-24T12:00:17.8",
+        "created_at": "2025-03-24T08:34:36.718",
+        "updated_at": "2025-03-24T12:00:17.872"
+      }
+    ],
+    "linked_users": [
+      {
+        "id": 5,
+        "username": "smendoza",
+        "email": "smendoza@twsfs.com"
+      },
+      {
+        "id": 11,
+        "username": "dfernandez",
+        "email": "dfernandez@twsfs.com"
+      }
+    ]
+  },
+  {
+    "id": 122,
+    "adjusted_start_time": "09:10:00",
+    "adjusted_end_time": "12:10:00",
+    "notified": "2025-03-22 16:10:04.426",
+    "created_by_role": "Customer",
+    "property_id": 89,
+    "property_name": "Del Pueblo Plaza",
+    "service_type_name": "Day Porter Service",
+    "service_records_today": [
+      {
+        "id": 6175,
+        "start_date_time": "2025-03-24T08:34:36.471",
+        "end_date_time": "2025-03-24T12:00:17.8",
+        "created_at": "2025-03-24T08:34:36.718",
+        "updated_at": "2025-03-24T12:00:17.872"
+      }
+    ],
+    "linked_users": [
+      {
+        "id": 5,
+        "username": "smendoza",
+        "email": "smendoza@twsfs.com"
+      },
+      {
+        "id": 11,
+        "username": "dfernandez",
+        "email": "dfernandez@twsfs.com"
+      }
+    ]
+  }
+]

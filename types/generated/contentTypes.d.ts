@@ -392,6 +392,33 @@ export interface ApiAccountAccount extends Schema.CollectionType {
   };
 }
 
+export interface ApiAlarmLogAlarmLog extends Schema.CollectionType {
+  collectionName: 'alarm_logs';
+  info: {
+    displayName: 'Alarm Log';
+    pluralName: 'alarm-logs';
+    singularName: 'alarm-log';
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::alarm-log.alarm-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    logs: Attribute.JSON;
+    runAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::alarm-log.alarm-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiAlarmAlarm extends Schema.CollectionType {
   collectionName: 'alarms';
   info: {
@@ -1236,7 +1263,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
         minLength: 6;
       }>;
     name: Attribute.String & Attribute.Required;
-    oid: Attribute.String;
     password: Attribute.Password &
       Attribute.Private &
       Attribute.SetMinMaxLength<{
@@ -1281,6 +1307,7 @@ declare module '@strapi/types' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::account.account': ApiAccountAccount;
+      'api::alarm-log.alarm-log': ApiAlarmLogAlarmLog;
       'api::alarm.alarm': ApiAlarmAlarm;
       'api::audit-log.audit-log': ApiAuditLogAuditLog;
       'api::customer.customer': ApiCustomerCustomer;

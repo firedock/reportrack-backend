@@ -13,6 +13,12 @@ module.exports = {
       config: {},
     },
     {
+      method: 'GET',
+      path: '/alarms/custom/alarms-without-users',
+      handler: 'alarm.getAlarmsWithoutUsers',
+      config: {},
+    },
+    {
       method: 'POST',
       path: '/alarms/trigger',
       handler: 'alarm.triggerAlarms',

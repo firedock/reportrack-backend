@@ -18,7 +18,7 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
         const userProperties = await strapi.db
           .query('api::property.property')
           .findMany({
-            where: { users: { id: user.id } },
+            where: { users: { id: user.id } }, // Fetch properties associated with the user
             select: ['id'],
           });
 
@@ -68,6 +68,21 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
       ctx.badRequest('Error resetting notifications', { error });
     }
   },
+  async getAlarmsWithoutUsers(ctx) {
+    try {
+      const result = await strapi.db.connection.raw(`
+        SELECT *
+        FROM alarms_without_users
+      `);
+
+      ctx.send(result.rows);
+    } catch (error) {
+      console.error('Error fetching alarms without users:', error);
+      ctx.send({ error: 'Failed to fetch alarms without users' });
+    }
+  },
+
+  // This method is used to fetch all alarms with pagination and filtering
   async getAllAlarms(ctx) {
     try {
       const {
@@ -100,7 +115,15 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
       }
 
       const populateOption =
-        populate === '*' ? { property: true, customer: true } : populate;
+        populate === '*'
+          ? {
+              property: {
+                populate: ['users'],
+              },
+              customer: true,
+              service_type: true,
+            }
+          : populate;
 
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
         where: filters,
@@ -110,12 +133,20 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
         populate: populateOption,
       });
 
+      // Attach users to top-level "users" key for frontend convenience
+      const alarmsWithUsers = alarms.map((alarm) => ({
+        ...alarm,
+        users: alarm.property?.users || [],
+      }));
+
+      // console.log('Fetched alarms:', alarms);
+
       const total = await strapi.db.query('api::alarm.alarm').count({
         where: filters,
       });
 
       return ctx.send({
-        data: alarms,
+        data: alarmsWithUsers, // ✅ Send the modified version that includes top-level users
         meta: {
           pagination: {
             page: Number(page),

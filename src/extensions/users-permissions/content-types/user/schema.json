@@ -74,9 +74,6 @@
       "type": "string",
       "required": true
     },
-    "oid": {
-      "type": "string"
-    },
     "customers": {
       "type": "relation",
       "relation": "manyToMany",

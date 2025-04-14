@@ -21,6 +21,17 @@ module.exports = createCoreController(
 
       return ctx.send(records); // Return the filtered properties
     },
+    async getPropertiesWithoutUsers(ctx) {
+      try {
+        const result = await strapi.db.connection.raw(`
+      SELECT * FROM properties_without_users
+    `);
+        ctx.send(result.rows);
+      } catch (error) {
+        console.error('Error:', error);
+        ctx.send({ error: 'Failed to fetch properties without users' });
+      }
+    },
     async findByCustomer(ctx) {
       const { id } = ctx.params; // Get the customer ID from URL params
 

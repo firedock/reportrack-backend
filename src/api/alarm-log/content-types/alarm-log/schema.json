@@ -1,0 +1,16 @@
+{
+  "collectionName": "alarm_logs",
+  "info": {
+    "singularName": "alarm-log",
+    "pluralName": "alarm-logs",
+    "displayName": "Alarm Log"
+  },
+  "attributes": {
+    "logs": {
+      "type": "json"
+    },
+    "runAt": {
+      "type": "datetime"
+    }
+  }
+}

@@ -29,5 +29,27 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+    async getCustomerUsersWithoutProperties(ctx) {
+      try {
+        const result = await strapi.db.connection.raw(`
+          SELECT * FROM customer_users_without_properties
+        `);
+        ctx.send(result.rows);
+      } catch (error) {
+        console.error('Error:', error);
+        ctx.send({ error: 'Failed to fetch customers without properties' });
+      }
+    },
+    async getCustomersWithoutProperties(ctx) {
+      try {
+        const result = await strapi.db.connection.raw(`
+          SELECT * FROM customers_without_properties
+        `);
+        ctx.send(result.rows);
+      } catch (error) {
+        console.error('Error:', error);
+        ctx.send({ error: 'Failed to fetch customers without properties' });
+      }
+    },
   })
 );

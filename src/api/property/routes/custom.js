@@ -18,6 +18,12 @@ module.exports = {
     },
     {
       method: 'GET',
+      path: '/properties/custom/properties-without-users',
+      handler: 'property.getPropertiesWithoutUsers',
+      config: {},
+    },
+    {
+      method: 'GET',
       path: '/properties/custom/customer/:id',
       handler: 'property.findByCustomer',
       config: {},

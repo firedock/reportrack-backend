@@ -120,7 +120,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
         logs.push(`- Alarm Service Type: ${alarmServiceType?.service}`);
 
-        // Service record query using the corrected todayStartUtc
+        // Service record query using property, service_type, and time range
         const query = {
           where: {
             property: property.id,
@@ -222,6 +222,14 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       );
       console.error(error);
     }
+
+    // @ts-ignore
+    await strapi.entityService.create('api::alarm-log.alarm-log', {
+      data: {
+        logs,
+        runAt: dayjs().toISOString(),
+      },
+    });
 
     return logs; // Return logs for debugging
   },
@@ -354,7 +362,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         `,
       };
 
-      // Notification Logic Based on `createdByRole`
+      // ********* Notification Logic Based on `createdByRole` *********
+      // If the alarm was created by a customer, send to customer users
+      // If the alarm was created by a user with a different role, send to all users associated with the property
+      // and the global alarm recipient
       if (createdByRole === 'Customer') {
         // Look up customer user associated with the property
         const customerUsers = await strapi.db
@@ -362,7 +373,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           .findMany({
             where: {
               properties: property.id,
-              role: { name: 'Customer' }, // adjust if role matching is different
+              role: { name: 'Customer' },
             },
             populate: ['role'],
           });
@@ -393,7 +404,9 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       } else {
         const globalAlarmEmail = 'robert@firedock.com'; // Replace with your desired email
 
-        // Send to associated users
+        // Send to users associated with the property
+        // Adjust the query to fetch users associated with the property
+        // and ensure they have the appropriate role for receiving alarms
         const users = await strapi.db
           .query('plugin::users-permissions.user')
           .findMany({
@@ -439,12 +452,12 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       }
 
       // Update the notified field
-      console.log('Update the notified field', !process.env.IS_DEV);
-      if (!process.env.IS_DEV)
-        await strapi.db.query('api::alarm.alarm').update({
-          where: { id: alarm.id },
-          data: { notified: dayjs.utc().toISOString() },
-        });
+      // console.log('Update the notified field', !process.env.IS_DEV);
+      // if (!process.env.IS_DEV)
+      await strapi.db.query('api::alarm.alarm').update({
+        where: { id: alarm.id },
+        data: { notified: dayjs.utc().toISOString() },
+      });
     } catch (error) {
       console.error(`Error triggering ${type} alarm:`, error);
     }
