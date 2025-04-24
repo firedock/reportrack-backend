@@ -13,6 +13,24 @@ module.exports = {
       config: {},
     },
     {
+      method: 'POST',
+      path: '/alarms/custom/alarms',
+      handler: 'api::alarm.alarm.create', // default controller
+      config: {},
+    },
+    {
+      method: 'DELETE',
+      path: '/alarms/custom/alarms/:id',
+      handler: 'api::alarm.alarm.delete', // default controller
+      config: {},
+    },
+    {
+      method: 'PUT',
+      path: '/alarms/custom/alarms/:id',
+      handler: 'api::alarm.alarm.update', // default controller
+      config: {},
+    },
+    {
       method: 'GET',
       path: '/alarms/custom/alarms-without-users',
       handler: 'alarm.getAlarmsWithoutUsers',
