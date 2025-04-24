@@ -7,7 +7,8 @@
     "dev": "strapi develop",
     "start": "strapi start",
     "build": "strapi build",
-    "strapi": "strapi"
+    "strapi": "strapi",
+    "postbuild": "cp -R build public/admin"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "4.20.1",
