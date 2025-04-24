@@ -122,3 +122,8 @@ build
 # dev
 dev.md
 .vscode/*
+
+# Strapi admin build 
+# https://docs.strapi.io/developer-docs/latest/development/admin-customization.html#build-the-admin-panel
+!public/admin/
+!public/admin/**
