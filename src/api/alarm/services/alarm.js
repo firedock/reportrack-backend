@@ -7,7 +7,6 @@ const timezone = require('dayjs/plugin/timezone');
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
 
-// Extend Day.js with required plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isSameOrBefore);
@@ -49,7 +48,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         logs.push(
           `----------------------------------------------------------------------------------------`
         );
-
         const currentTimeUtc = dayjs.utc();
         const currentTimeInTimezone = currentTimeUtc.tz(alarmTimezone);
         const currentDay = currentTimeInTimezone.format('dddd');
@@ -140,25 +138,16 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
               },
             ],
           },
-          populate: {
-            service_type: true,
-          },
+          populate: { service_type: true },
         };
 
         const serviceRecords = await strapi.db
           .query('api::service-record.service-record')
           .findMany(query);
 
-        const serviceMatches = serviceRecords.some((record) => {
-          const recordServiceTypeId = record?.service_type?.id;
-          const alarmServiceTypeId = alarmServiceType?.id;
-
-          return (
-            recordServiceTypeId &&
-            alarmServiceTypeId &&
-            recordServiceTypeId === alarmServiceTypeId
-          );
-        });
+        const serviceMatches = serviceRecords.some(
+          (record) => record?.service_type?.id === alarmServiceType?.id
+        );
 
         const serviceHasStarted = serviceRecords.some(
           (record) =>
@@ -192,12 +181,9 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
                   $lte: alarmEndTimeUtc,
                 },
               },
-              populate: {
-                service_type: true,
-              },
+              populate: { service_type: true },
             });
 
-          // @ts-ignore
           await this.triggerAlarm(
             alarm,
             'start',
@@ -209,7 +195,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           logs.push(
             `- ${serviceRecords.length} matching Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
           );
-          continue;
         }
       }
 
@@ -223,7 +208,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       console.error(error);
     }
 
-    // @ts-ignore
     await strapi.entityService.create('api::alarm-log.alarm-log', {
       data: {
         logs,
@@ -231,7 +215,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       },
     });
 
-    return logs; // Return logs for debugging
+    return logs;
   },
 
   async triggerAlarm(
@@ -274,42 +258,40 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       const serviceRecordsDetails =
         serviceRecordsForDay.length > 0
           ? `
-        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-          <thead>
-            <tr>
-              <th>Service Record ID</th>
-              <th>Start Time (Local)</th>
-              <th>End Time (Local)</th>
-              <th>Service Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${serviceRecordsForDay
-              .map((record) => {
-                const startTimeLocal = dayjs
-                  .utc(record.startDateTime)
-                  .tz(timezone)
-                  .format('MM/DD/YYYY hh:mm A');
-                const endTimeLocal = record.endDateTime
-                  ? dayjs
-                      .utc(record.endDateTime)
-                      .tz(timezone)
-                      .format('MM/DD/YYYY hh:mm A')
-                  : 'N/A';
-
-                return `
-                <tr>
-                  <td>${record.id}</td>
-                  <td>${startTimeLocal}</td>
-                  <td>${endTimeLocal}</td>
-                  <td>${record?.service_type?.service || 'N/A'}</td>
-                </tr>
-              `;
-              })
-              .join('')}
-          </tbody>
-        </table>
-      `
+          <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <thead>
+              <tr>
+                <th>Service Record ID</th>
+                <th>Start Time (Local)</th>
+                <th>End Time (Local)</th>
+                <th>Service Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${serviceRecordsForDay
+                .map((record) => {
+                  const startTimeLocal = dayjs
+                    .utc(record.startDateTime)
+                    .tz(timezone)
+                    .format('MM/DD/YYYY hh:mm A');
+                  const endTimeLocal = record.endDateTime
+                    ? dayjs
+                        .utc(record.endDateTime)
+                        .tz(timezone)
+                        .format('MM/DD/YYYY hh:mm A')
+                    : 'N/A';
+                  return `
+                  <tr>
+                    <td>${record.id}</td>
+                    <td>${startTimeLocal}</td>
+                    <td>${endTimeLocal}</td>
+                    <td>${record?.service_type?.service || 'N/A'}</td>
+                  </tr>`;
+                })
+                .join('')}
+            </tbody>
+          </table>
+        `
           : '<p>No service records found for today.</p>';
 
       const emailContent = {
@@ -320,140 +302,69 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         }</strong>" (Customer: <strong>${
           customer?.name || 'N/A'
         }</strong>) has been triggered.</p>
-          
           <h3>Alarm Details:</h3>
           <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-            <tr>
-              <td><strong>Alarm ID</strong></td>
-              <td>${alarm.id}</td>
-            </tr>
-            <tr>
-              <td><strong>Alarm Timezone</strong></td>
-              <td>${timezone || 'UTC'}</td>
-            </tr>
-            <tr>
-              <td><strong>Alarm Start Time (Local)</strong></td>
-              <td>${alarmStartLocal}</td>
-            </tr>
-            <tr>
-              <td><strong>Alarm End Time (Local)</strong></td>
-              <td>${alarmEndLocal}</td>
-            </tr>
-            <tr>
-              <td><strong>Service Type</strong></td>
-              <td>${service_type?.service || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td><strong>Active Days</strong></td>
-              <td>${daysOfWeek.join(', ')}</td>
-            </tr>
-            <tr>
-              <td><strong>Status</strong></td>
-              <td>${alarm.active ? 'Active' : 'Inactive'}</td>
-            </tr>
-            <tr>
-              <td><strong>Last Notified</strong></td>
-              <td>${lastNotifiedLocal}</td>
-            </tr>
+            <tr><td><strong>Alarm ID</strong></td><td>${alarm.id}</td></tr>
+            <tr><td><strong>Alarm Timezone</strong></td><td>${
+              timezone || 'UTC'
+            }</td></tr>
+            <tr><td><strong>Alarm Start Time (Local)</strong></td><td>${alarmStartLocal}</td></tr>
+            <tr><td><strong>Alarm End Time (Local)</strong></td><td>${alarmEndLocal}</td></tr>
+            <tr><td><strong>Service Type</strong></td><td>${
+              service_type?.service || 'N/A'
+            }</td></tr>
+            <tr><td><strong>Active Days</strong></td><td>${daysOfWeek.join(
+              ', '
+            )}</td></tr>
+            <tr><td><strong>Status</strong></td><td>${
+              alarm.active ? 'Active' : 'Inactive'
+            }</td></tr>
+            <tr><td><strong>Last Notified</strong></td><td>${lastNotifiedLocal}</td></tr>
           </table>
-      
           <h3>Service Records Found for the subject property today:</h3>
           ${serviceRecordsDetails}
         `,
       };
 
-      // ********* Notification Logic Based on `createdByRole` *********
-      // If the alarm was created by a customer, send to customer users
-      // If the alarm was created by a user with a different role, send to all users associated with the property
-      // and the global alarm recipient
-      if (createdByRole === 'Customer') {
-        // Look up customer user associated with the property
-        const customerUsers = await strapi.db
-          .query('plugin::users-permissions.user')
-          .findMany({
-            where: {
-              properties: property.id,
-              role: { name: 'Customer' },
-            },
-            populate: ['role'],
-          });
+      // 🔐 Role-based filter: Only notify users with matching role and property
+      const roleToNotify =
+        createdByRole === 'Customer' ? 'Customer' : 'Subscriber';
 
-        if (customerUsers && customerUsers.length > 0) {
-          for (const user of customerUsers) {
-            const emailData = {
-              ...emailContent,
-              to: user.email,
-              from: 'noreply@reportrack.com',
-            };
+      const relevantUsers = await strapi.db
+        .query('plugin::users-permissions.user')
+        .findMany({
+          where: {
+            properties: property.id,
+            role: { name: roleToNotify },
+          },
+          populate: ['role'],
+        });
 
-            try {
-              await strapi.plugins['email'].services.email.send(emailData);
-              console.log(`Email sent to customer user: ${user.email}`);
-            } catch (error) {
-              console.error(
-                `Failed to send email to customer user:`,
-                error.message
-              );
-            }
+      if (relevantUsers && relevantUsers.length > 0) {
+        for (const user of relevantUsers) {
+          const emailData = {
+            ...emailContent,
+            to: user.email,
+            from: 'noreply@reportrack.com',
+          };
+
+          try {
+            await strapi.plugins['email'].services.email.send(emailData);
+            console.log(`Email sent to ${user.email}`);
+          } catch (error) {
+            console.error(
+              `Failed to send email to ${user.email}:`,
+              error.message
+            );
           }
-        } else {
-          console.warn(
-            `No customer user found for alarm ${alarm.id} and property ${property.id}`
-          );
         }
       } else {
-        const globalAlarmEmail = 'robert@firedock.com'; // Replace with your desired email
-
-        // Send to users associated with the property
-        // Adjust the query to fetch users associated with the property
-        // and ensure they have the appropriate role for receiving alarms
-        const users = await strapi.db
-          .query('plugin::users-permissions.user')
-          .findMany({
-            where: { properties: property.id },
-          });
-
-        if (users && users.length > 0) {
-          for (const user of users) {
-            const emailData = {
-              ...emailContent,
-              to: user.email,
-              from: 'noreply@reportrack.com',
-            };
-
-            try {
-              await strapi.plugins['email'].services.email.send(emailData);
-              console.log(`Email sent to ${user.email}`);
-            } catch (error) {
-              console.error(
-                `Failed to send email to ${user.email}:`,
-                error.message
-              );
-            }
-          }
-        }
-
-        // Send to global alarm recipient
-        const globalEmailData = {
-          ...emailContent,
-          to: globalAlarmEmail,
-          from: 'noreply@reportrack.com',
-        };
-
-        try {
-          await strapi.plugins['email'].services.email.send(globalEmailData);
-          console.log(`Global alarm email sent to ${globalAlarmEmail}`);
-        } catch (error) {
-          console.error(
-            `Failed to send global alarm email to ${globalAlarmEmail}:`,
-            error.message
-          );
-        }
+        console.warn(
+          `No users with role "${roleToNotify}" found for alarm ${alarm.id} and property ${property.id}`
+        );
       }
 
-      // Update the notified field
-      // console.log('Update the notified field', !process.env.IS_DEV);
-      // if (!process.env.IS_DEV)
+      // Update notified timestamp
       await strapi.db.query('api::alarm.alarm').update({
         where: { id: alarm.id },
         data: { notified: dayjs.utc().toISOString() },
