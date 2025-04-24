@@ -6,7 +6,7 @@ module.exports = {
   oneMinuteJob: {
     task: async ({ strapi }) => {
       const timestamp = new Date().toISOString();
-      console.log(`${timestamp}: Cron job executed every minute`);
+      console.log(`${timestamp}: Cron job executed every minute...`);
       const alarmTriggerUrl = `${process.env.PUBLIC_URL}/api/alarms/trigger`;
 
       // MongoDB connection settings
