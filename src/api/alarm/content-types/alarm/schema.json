@@ -68,6 +68,12 @@
       "type": "string",
       "required": false,
       "description": "The role of the user who created this alarm (e.g., Admin, Customer)"
+    },
+    "logs": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::alarm-log.alarm-log",
+      "mappedBy": "alarm"
     }
   }
 }

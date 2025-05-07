@@ -400,6 +400,11 @@ export interface ApiAlarmLogAlarmLog extends Schema.CollectionType {
     singularName: 'alarm-log';
   };
   attributes: {
+    alarm: Attribute.Relation<
+      'api::alarm-log.alarm-log',
+      'manyToOne',
+      'api::alarm.alarm'
+    >;
     createdAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
       'api::alarm-log.alarm-log',
@@ -454,6 +459,11 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
     endAlarmDisabled: Attribute.Boolean;
     endTime: Attribute.Time;
     endTimeDelay: Attribute.Integer;
+    logs: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToMany',
+      'api::alarm-log.alarm-log'
+    >;
     notified: Attribute.DateTime;
     property: Attribute.Relation<
       'api::alarm.alarm',
@@ -1274,6 +1284,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'api::property.property'
     >;
     provider: Attribute.String;
+    receiveAlarmNotifications: Attribute.Boolean;
     resetPasswordToken: Attribute.String & Attribute.Private;
     role: Attribute.Relation<
       'plugin::users-permissions.user',

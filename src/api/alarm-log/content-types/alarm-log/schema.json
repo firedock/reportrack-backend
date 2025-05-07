@@ -11,6 +11,12 @@
     },
     "runAt": {
       "type": "datetime"
+    },
+    "alarm": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::alarm.alarm",
+      "inversedBy": "logs"
     }
   }
 }

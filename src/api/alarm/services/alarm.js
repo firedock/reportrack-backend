@@ -184,13 +184,14 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
               populate: { service_type: true },
             });
 
-          await this.triggerAlarm(
+          const alarmLogs = await this.triggerAlarm(
             alarm,
             'start',
             serviceRecordsForDay,
             alarmStartTimeUtc,
             alarmEndTimeUtc
           );
+          logs.push(...alarmLogs);
         } else {
           logs.push(
             `- ${serviceRecords.length} matching Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
@@ -215,7 +216,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       },
     });
 
-    return logs;
+    return {
+      message: 'Alarms checked and triggered successfully',
+      logs,
+    };
   },
 
   async triggerAlarm(
@@ -225,6 +229,8 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
     alarmStartTimeUtc,
     alarmEndTimeUtc
   ) {
+    const logs = [];
+
     try {
       const {
         property,
@@ -233,12 +239,13 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         timezone,
         daysOfWeek,
         notified,
-        createdByRole, // Used to determine the notification recipient
+        createdByRole,
       } = alarm;
 
       if (!property) {
-        console.error(`Cannot trigger alarm ID ${alarm.id}: Missing property.`);
-        return;
+        const msg = `Cannot trigger alarm ID ${alarm.id}: Missing property.`;
+        logs.push(`❌ ${msg}`);
+        return logs;
       }
 
       // Alarm times in local timezone
@@ -249,88 +256,15 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         .tz(timezone)
         .format('MM/DD/YYYY hh:mm A');
 
-      // Convert "Last Notified" to the alarm's timezone
-      const lastNotifiedLocal = notified
-        ? dayjs(notified).tz(timezone).format('MM/DD/YYYY hh:mm:ss A')
-        : 'Never';
-
-      // Format service records into an HTML table with timezone conversion
-      const serviceRecordsDetails =
-        serviceRecordsForDay.length > 0
-          ? `
-          <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-            <thead>
-              <tr>
-                <th>Service Record ID</th>
-                <th>Start Time (Local)</th>
-                <th>End Time (Local)</th>
-                <th>Service Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${serviceRecordsForDay
-                .map((record) => {
-                  const startTimeLocal = dayjs
-                    .utc(record.startDateTime)
-                    .tz(timezone)
-                    .format('MM/DD/YYYY hh:mm A');
-                  const endTimeLocal = record.endDateTime
-                    ? dayjs
-                        .utc(record.endDateTime)
-                        .tz(timezone)
-                        .format('MM/DD/YYYY hh:mm A')
-                    : 'N/A';
-                  return `
-                  <tr>
-                    <td>${record.id}</td>
-                    <td>${startTimeLocal}</td>
-                    <td>${endTimeLocal}</td>
-                    <td>${record?.service_type?.service || 'N/A'}</td>
-                  </tr>`;
-                })
-                .join('')}
-            </tbody>
-          </table>
-        `
-          : '<p>No service records found for today.</p>';
-
       const emailContent = {
         subject: `Alarm ${type} Notification for ${property.name}`,
-        html: `
-          <p>The ${type} alarm for property "<strong>${
-          property.name
-        }</strong>" (Customer: <strong>${
-          customer?.name || 'N/A'
-        }</strong>) has been triggered.</p>
-          <h3>Alarm Details:</h3>
-          <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-            <tr><td><strong>Alarm ID</strong></td><td>${alarm.id}</td></tr>
-            <tr><td><strong>Alarm Timezone</strong></td><td>${
-              timezone || 'UTC'
-            }</td></tr>
-            <tr><td><strong>Alarm Start Time (Local)</strong></td><td>${alarmStartLocal}</td></tr>
-            <tr><td><strong>Alarm End Time (Local)</strong></td><td>${alarmEndLocal}</td></tr>
-            <tr><td><strong>Service Type</strong></td><td>${
-              service_type?.service || 'N/A'
-            }</td></tr>
-            <tr><td><strong>Active Days</strong></td><td>${daysOfWeek.join(
-              ', '
-            )}</td></tr>
-            <tr><td><strong>Status</strong></td><td>${
-              alarm.active ? 'Active' : 'Inactive'
-            }</td></tr>
-            <tr><td><strong>Last Notified</strong></td><td>${lastNotifiedLocal}</td></tr>
-          </table>
-          <h3>Service Records Found for the subject property today:</h3>
-          ${serviceRecordsDetails}
-        `,
+        html: `<p>The ${type} alarm for "<strong>${property.name}</strong>" was triggered.</p>`,
       };
 
-      // 🔐 Role-based filter: Only notify users with matching role and property
       const roleToNotify =
         createdByRole === 'Customer' ? 'Customer' : 'Subscriber';
-
-      const relevantUsers = await strapi.db
+      // First fetch all users assigned to the property and role
+      const allAssignedUsers = await strapi.db
         .query('plugin::users-permissions.user')
         .findMany({
           where: {
@@ -340,37 +274,46 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           populate: ['role'],
         });
 
-      if (relevantUsers && relevantUsers.length > 0) {
-        for (const user of relevantUsers) {
-          const emailData = {
-            ...emailContent,
-            to: user.email,
-            from: 'noreply@reportrack.com',
-          };
+      const optedInUsers = allAssignedUsers.filter(
+        (user) => user.receiveAlarmNotifications
+      );
 
-          try {
-            await strapi.plugins['email'].services.email.send(emailData);
-            console.log(`Email sent to ${user.email}`);
-          } catch (error) {
-            console.error(
-              `Failed to send email to ${user.email}:`,
-              error.message
-            );
-          }
-        }
-      } else {
-        console.warn(
-          `No users with role "${roleToNotify}" found for alarm ${alarm.id} and property ${property.id}`
+      logs.push(
+        `🔍 Found ${allAssignedUsers.length} user(s) with role "${roleToNotify}" assigned to property ${property.id}.`
+      );
+      logs.push(
+        `🔔 ${optedInUsers.length} of them have opted in to receive alarm notifications.`
+      );
+
+      if (!optedInUsers.length) {
+        logs.push(
+          `⚠️ No users opted in for notifications. Emails will not be sent.`
         );
       }
 
-      // Update notified timestamp
-      await strapi.db.query('api::alarm.alarm').update({
-        where: { id: alarm.id },
-        data: { notified: dayjs.utc().toISOString() },
-      });
+      for (const user of optedInUsers) {
+        try {
+          await strapi.plugins['email'].services.email.send({
+            ...emailContent,
+            to: user.email,
+            from: 'noreply@reportrack.com',
+          });
+          logs.push(`✅ Email sent to ${user.email}`);
+        } catch (err) {
+          logs.push(`❌ Failed to send email to ${user.email}: ${err.message}`);
+        }
+      }
+
+      // Update notified
+      // await strapi.db.query('api::alarm.alarm').update({
+      //   where: { id: alarm.id },
+      //   data: { notified: dayjs.utc().toISOString() },
+      // });
+
+      return logs;
     } catch (error) {
-      console.error(`Error triggering ${type} alarm:`, error);
+      logs.push(`❌ Error triggering alarm ID ${alarm.id}: ${error.message}`);
+      return logs;
     }
   },
 }));

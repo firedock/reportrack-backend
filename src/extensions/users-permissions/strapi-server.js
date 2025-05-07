@@ -237,6 +237,8 @@ module.exports = (plugin) => {
                 provider: sanitizedUser.provider,
                 confirmed: sanitizedUser.confirmed,
                 blocked: sanitizedUser.blocked,
+                receiveAlarmNotifications:
+                  sanitizedUser.receiveAlarmNotifications,
                 createdAt: sanitizedUser.createdAt,
                 updatedAt: sanitizedUser.updatedAt,
                 name: sanitizedUser.name,
