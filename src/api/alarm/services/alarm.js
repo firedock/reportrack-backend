@@ -305,10 +305,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       }
 
       // Update notified
-      // await strapi.db.query('api::alarm.alarm').update({
-      //   where: { id: alarm.id },
-      //   data: { notified: dayjs.utc().toISOString() },
-      // });
+      await strapi.db.query('api::alarm.alarm').update({
+        where: { id: alarm.id },
+        data: { notified: dayjs.utc().toISOString() },
+      });
 
       return logs;
     } catch (error) {
