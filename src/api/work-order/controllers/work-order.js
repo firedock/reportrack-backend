@@ -28,7 +28,6 @@ module.exports = createCoreController(
     },
     async find(ctx) {
       const user = ctx.state.user; // Get the authenticated user
-
       // Use the service to fetch the records based on user filters
       const records = await strapi
         .service('api::work-order.work-order')

@@ -27,11 +27,6 @@
       "target": "api::customer.customer",
       "inversedBy": "properties"
     },
-    "service_types": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::service-type.service-type"
-    },
     "alarms": {
       "type": "json"
     },
@@ -55,6 +50,9 @@
       "relation": "manyToMany",
       "target": "plugin::users-permissions.user",
       "mappedBy": "properties"
+    },
+    "service_type_settings": {
+      "type": "json"
     }
   }
 }

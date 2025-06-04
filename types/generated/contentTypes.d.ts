@@ -677,11 +677,7 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'oneToMany',
       'api::service-record.service-record'
     >;
-    service_types: Attribute.Relation<
-      'api::property.property',
-      'oneToMany',
-      'api::service-type.service-type'
-    >;
+    service_type_settings: Attribute.JSON;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
       'api::property.property',
