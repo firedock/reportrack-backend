@@ -88,6 +88,21 @@
     },
     "receiveAlarmNotifications": {
       "type": "boolean"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
     }
   }
 }

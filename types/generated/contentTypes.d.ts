@@ -657,7 +657,9 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'oneToOne',
       'api::account.account'
     >;
+    address: Attribute.String;
     alarms: Attribute.JSON;
+    city: Attribute.String;
     createdAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
       'api::property.property',
@@ -678,6 +680,7 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'api::service-record.service-record'
     >;
     service_type_settings: Attribute.JSON;
+    state: Attribute.String;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
       'api::property.property',
@@ -695,6 +698,7 @@ export interface ApiPropertyProperty extends Schema.CollectionType {
       'oneToMany',
       'api::work-order.work-order'
     >;
+    zip: Attribute.String;
   };
 }
 
@@ -1248,7 +1252,9 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'oneToOne',
       'api::account.account'
     >;
+    address: Attribute.String;
     blocked: Attribute.Boolean & Attribute.DefaultTo<false>;
+    city: Attribute.String;
     confirmationToken: Attribute.String & Attribute.Private;
     confirmed: Attribute.Boolean & Attribute.DefaultTo<false>;
     createdAt: Attribute.DateTime;
@@ -1274,6 +1280,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    phone: Attribute.String;
     properties: Attribute.Relation<
       'plugin::users-permissions.user',
       'manyToMany',
@@ -1287,6 +1294,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.role'
     >;
+    state: Attribute.String;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
       'plugin::users-permissions.user',
@@ -1300,6 +1308,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       Attribute.SetMinMaxLength<{
         minLength: 3;
       }>;
+    zip: Attribute.String;
   };
 }
 

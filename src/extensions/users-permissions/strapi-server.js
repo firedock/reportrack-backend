@@ -1,5 +1,5 @@
 // @ts-nocheck
-const { ApplicationError, ValidationError } = require('@strapi/utils').errors;
+const { ApplicationError, ValidationError, NotFoundError } = require('@strapi/utils').errors;
 const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
 const { sanitize } = require('@strapi/utils');
 
@@ -176,7 +176,85 @@ module.exports = (plugin) => {
         ctx.status = error.status || 400;
         ctx.body = { error: { status: ctx.status, message: errorMessage } };
       }
-    }), // Find users with customers inferred from their properties
+    }),
+    // Find single user with all fields including address and phone
+    (plugin.controllers.user.findOne = async (ctx) => {
+      try {
+        const { id } = ctx.params;
+
+        // Fetch the user with populated relationships
+        const user = await strapi
+          .query('plugin::users-permissions.user')
+          .findOne({
+            where: { id },
+            populate: {
+              role: true,
+              properties: {
+                populate: {
+                  customer: true,
+                },
+              },
+            },
+          });
+
+        if (!user) {
+          ctx.status = 404;
+          ctx.body = { error: { status: 404, message: 'User not found' } };
+          return;
+        }
+
+        // Sanitize the user data
+        const sanitizedUser = await sanitize.contentAPI.output(
+          user,
+          strapi.getModel('plugin::users-permissions.user')
+        );
+
+        // Extract unique customers from properties
+        const uniqueCustomers = sanitizedUser.properties
+          .filter((prop) => prop.customer)
+          .map((prop) => prop.customer)
+          .filter(
+            (customer, index, self) =>
+              customer &&
+              self.findIndex((c) => c.id === customer.id) === index
+          );
+
+        // Return user with all fields including new address and phone fields
+        const response = {
+          id: sanitizedUser.id,
+          username: sanitizedUser.username,
+          email: sanitizedUser.email,
+          provider: sanitizedUser.provider,
+          confirmed: sanitizedUser.confirmed,
+          blocked: sanitizedUser.blocked,
+          receiveAlarmNotifications: sanitizedUser.receiveAlarmNotifications,
+          createdAt: sanitizedUser.createdAt,
+          updatedAt: sanitizedUser.updatedAt,
+          name: sanitizedUser.name,
+          phone: sanitizedUser.phone,
+          address: sanitizedUser.address,
+          city: sanitizedUser.city,
+          state: sanitizedUser.state,
+          zip: sanitizedUser.zip,
+          role: sanitizedUser.role,
+          customers: uniqueCustomers,
+          properties: sanitizedUser.properties,
+        };
+
+        ctx.send(response);
+      } catch (error) {
+        console.error('Error in user.findOne controller:', error);
+        ctx.status = error.status || 500;
+        ctx.body = {
+          error: {
+            status: ctx.status,
+            name: error.name || 'InternalServerError',
+            message: error.message || 'An unexpected error occurred.',
+          },
+        };
+      }
+    }),
+    // Find users with customers inferred from their properties
     (plugin.controllers.user.find = async (ctx) => {
       try {
         const { page = 1, pageSize = 25 } = ctx.query.pagination || {};
@@ -242,6 +320,11 @@ module.exports = (plugin) => {
                 createdAt: sanitizedUser.createdAt,
                 updatedAt: sanitizedUser.updatedAt,
                 name: sanitizedUser.name,
+                phone: sanitizedUser.phone,
+                address: sanitizedUser.address,
+                city: sanitizedUser.city,
+                state: sanitizedUser.state,
+                zip: sanitizedUser.zip,
                 role: sanitizedUser.role,
                 customers: uniqueCustomers, // Customers inferred from properties
                 properties: sanitizedUser.properties,

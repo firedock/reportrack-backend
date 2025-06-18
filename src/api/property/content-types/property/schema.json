@@ -53,6 +53,18 @@
     },
     "service_type_settings": {
       "type": "json"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
     }
   }
 }
