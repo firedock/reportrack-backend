@@ -24,7 +24,9 @@ module.exports = {
 
       console.log('📄 Files uploaded:', uploadedFiles?.length || 0);
 
-      // Update metadata
+      // Update metadata and return updated files
+      const finalFiles = [];
+      
       if (fileInfo && uploadedFiles && uploadedFiles.length > 0) {
         console.log('🔄 Starting metadata update for', uploadedFiles.length, 'files');
         
@@ -87,10 +89,18 @@ module.exports = {
               console.log(`🗄️ Successfully updated database fields for file ${file.id}`);
             }
             
+            // Add updated file with metadata to final results
+            finalFiles.push({
+              ...updatedFile,
+              provider_metadata: updateData.provider_metadata
+            });
+            
             console.log(`✅ Successfully updated file ${file.id}: Complete`);
             
           } catch (updateError) {
             console.error(`❌ Error updating file ${file.id}:`, updateError);
+            // Still add the original file if update fails
+            finalFiles.push(file);
           }
         }
       } else {
@@ -99,9 +109,11 @@ module.exports = {
           hasFiles: !!uploadedFiles, 
           fileCount: uploadedFiles?.length || 0 
         });
+        // No metadata to update, return original files
+        finalFiles.push(...uploadedFiles);
       }
 
-      ctx.body = uploadedFiles;
+      ctx.body = finalFiles;
     } catch (error) {
       console.error('❌ Upload error:', error);
       ctx.throw(500, 'Upload failed');
