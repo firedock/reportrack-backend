@@ -122,6 +122,7 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
               },
               customer: true,
               service_type: true,
+              expected_service_person: true,
             }
           : populate;
 

@@ -22,7 +22,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       // Fetch active alarms with related properties and customers
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
         where: { active: true },
-        populate: { property: true, customer: true, service_type: true },
+        populate: { property: true, customer: true, service_type: true, expected_service_person: true },
       });
 
       logs.push(
@@ -43,6 +43,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           property,
           service_type: alarmServiceType,
           notified,
+          expected_service_person,
         } = alarm;
 
         logs.push(
@@ -143,7 +144,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
         const serviceRecords = await strapi.db
           .query('api::service-record.service-record')
-          .findMany(query);
+          .findMany({
+            ...query,
+            populate: { service_type: true, users_permissions_user: true },
+          });
 
         const serviceMatches = serviceRecords.some(
           (record) => record?.service_type?.id === alarmServiceType?.id
@@ -162,13 +166,30 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
         );
 
+        // Check service person condition if expected_service_person is set
+        let servicePersonMatches = true; // Default to true for backward compatibility
+        if (expected_service_person) {
+          servicePersonMatches = serviceRecords.some(
+            (record) => record?.users_permissions_user?.id === expected_service_person.id
+          );
+          logs.push(`- Expected Service Person: ${expected_service_person.username || expected_service_person.id}`);
+          logs.push(`- Service Person Matches: ${servicePersonMatches}`);
+        } else {
+          logs.push(`- No expected service person set (optional condition)`);
+        }
+
         logs.push(`- Service type match: ${serviceMatches}`);
         logs.push(`- Service Record Started On Time: ${serviceHasStarted}`);
         logs.push(`- Service Record Ended On Time: ${serviceHasEnded}`);
 
-        if (!serviceMatches || (!serviceHasStarted && !serviceHasEnded)) {
+        if (!serviceMatches || (!serviceHasStarted && !serviceHasEnded) || !servicePersonMatches) {
+          const reasons = [];
+          if (!serviceMatches) reasons.push('service type mismatch');
+          if (!serviceHasStarted && !serviceHasEnded) reasons.push('missing start/end justification');
+          if (!servicePersonMatches) reasons.push('service person mismatch');
+          
           logs.push(
-            `- No matching service record found or missing start/end justification for property ID ${property.id}. > Trigger alarm.`
+            `- Alarm trigger reason(s): ${reasons.join(', ')} for property ID ${property.id}. > Trigger alarm.`
           );
 
           const serviceRecordsForDay = await strapi.db
@@ -181,7 +202,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
                   $lte: alarmEndTimeUtc,
                 },
               },
-              populate: { service_type: true },
+              populate: { service_type: true, users_permissions_user: true },
             });
 
           const alarmLogs = await this.triggerAlarm(

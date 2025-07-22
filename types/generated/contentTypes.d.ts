@@ -459,6 +459,11 @@ export interface ApiAlarmAlarm extends Schema.CollectionType {
     endAlarmDisabled: Attribute.Boolean;
     endTime: Attribute.Time;
     endTimeDelay: Attribute.Integer;
+    expected_service_person: Attribute.Relation<
+      'api::alarm.alarm',
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
     logs: Attribute.Relation<
       'api::alarm.alarm',
       'oneToMany',
