@@ -259,13 +259,35 @@ module.exports = (plugin) => {
       try {
         const { page = 1, pageSize = 25 } = ctx.query.pagination || {};
         const { sort, filters } = ctx.query || {};
+        const currentUser = ctx.state.user;
+        const currentUserRole = currentUser?.role?.name;
+
+        // Apply role-based filtering: only subscribers can see all users
+        let queryFilters = filters || {};
+        
+        if (currentUserRole !== 'Subscriber') {
+          // For non-subscribers (clients, customers, etc.), return empty result
+          // Only subscribers should have access to user lists for alarm creation
+          ctx.send({
+            data: [],
+            meta: {
+              pagination: {
+                page: parseInt(page, 10),
+                pageSize: parseInt(pageSize, 10),
+                pageCount: 0,
+                total: 0,
+              },
+            },
+          });
+          return;
+        }
 
         // Construct the query options
         const queryOptions = {
           limit: parseInt(pageSize, 10),
           offset: (parseInt(page, 10) - 1) * parseInt(pageSize, 10),
           orderBy: sort ? { [sort.split(':')[0]]: sort.split(':')[1] } : {},
-          where: filters || {},
+          where: queryFilters,
           populate: {
             role: true,
             properties: {
