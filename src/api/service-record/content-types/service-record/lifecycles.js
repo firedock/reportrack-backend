@@ -6,7 +6,8 @@ module.exports = {
     
     if (data.users_permissions_user) {
       // Use database transaction with row-level locking to prevent race conditions
-      const result = await strapi.db.transaction(async (trx) => {
+      const knex = strapi.db.connection;
+      const result = await knex.transaction(async (trx) => {
         // Lock the user row to prevent concurrent service record creation
         await trx.raw(`
           SELECT 1 FROM up_users 
@@ -22,8 +23,11 @@ module.exports = {
           WHERE ul.user_id = ? AND sr.end_date_time IS NULL
         `, [data.users_permissions_user]);
 
-        if (existingActiveRecords.rows && existingActiveRecords.rows.length > 0) {
-          const activeRecord = existingActiveRecords.rows[0];
+        // Handle different database drivers - some return 'rows', others return the array directly
+        const rows = existingActiveRecords.rows || existingActiveRecords;
+        
+        if (rows && rows.length > 0) {
+          const activeRecord = rows[0];
           const error = new Error(`User already has an active service record (ID: ${activeRecord.id}) started at ${activeRecord.start_date_time}. Please complete the existing service record before starting a new one.`);
           error.name = 'ValidationError';
           Object.assign(error, {
