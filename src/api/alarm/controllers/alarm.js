@@ -126,19 +126,64 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
             }
           : populate;
 
+      // Parse sort parameter to handle relation sorting
+      let orderBy = { createdAt: 'desc' };
+      if (sort) {
+        // Check if sorting by a relation field
+        if (sort.includes('customer.name') || sort.includes('property.name') || sort.includes('service_type.service')) {
+          // For relation sorting, we'll need to fetch all and sort in memory
+          // This is not ideal for large datasets but Strapi doesn't support relation sorting directly
+          orderBy = { createdAt: 'desc' }; // Default sort for the query
+        } else {
+          // Direct field sorting
+          const [field, order] = sort.split(':');
+          orderBy = { [field]: order || 'asc' };
+        }
+      }
+
       const alarms = await strapi.db.query('api::alarm.alarm').findMany({
         where: filters,
-        orderBy: sort || { createdAt: 'desc' },
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
+        orderBy,
+        limit: sort && (sort.includes('customer.name') || sort.includes('property.name') || sort.includes('service_type.service')) ? undefined : pageSize,
+        offset: sort && (sort.includes('customer.name') || sort.includes('property.name') || sort.includes('service_type.service')) ? undefined : (page - 1) * pageSize,
         populate: populateOption,
       });
 
       // Attach users to top-level "users" key for frontend convenience
-      const alarmsWithUsers = alarms.map((alarm) => ({
+      let alarmsWithUsers = alarms.map((alarm) => ({
         ...alarm,
         users: alarm.property?.users || [],
       }));
+
+      // Handle relation sorting in memory
+      if (sort && (sort.includes('customer.name') || sort.includes('property.name') || sort.includes('service_type.service'))) {
+        const [sortField, sortOrder] = sort.split(':');
+        const isAsc = sortOrder === 'asc';
+        
+        alarmsWithUsers.sort((a, b) => {
+          let aValue, bValue;
+          
+          if (sortField === 'customer.name') {
+            aValue = a.customer?.name || '';
+            bValue = b.customer?.name || '';
+          } else if (sortField === 'property.name') {
+            aValue = a.property?.name || '';
+            bValue = b.property?.name || '';
+          } else if (sortField === 'service_type.service') {
+            aValue = a.service_type?.service || '';
+            bValue = b.service_type?.service || '';
+          }
+          
+          if (aValue < bValue) return isAsc ? -1 : 1;
+          if (aValue > bValue) return isAsc ? 1 : -1;
+          return 0;
+        });
+        
+        // Apply pagination after sorting
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        alarmsWithUsers = alarmsWithUsers.slice(startIndex, endIndex);
+      }
 
       // console.log('Fetched alarms:', alarms);
 
