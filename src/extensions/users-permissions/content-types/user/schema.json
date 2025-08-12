@@ -89,6 +89,10 @@
     "receiveAlarmNotifications": {
       "type": "boolean"
     },
+    "receiveWorkOrderNotifications": {
+      "type": "boolean",
+      "default": true
+    },
     "phone": {
       "type": "string"
     },

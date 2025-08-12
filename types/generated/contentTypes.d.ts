@@ -627,6 +627,11 @@ export interface ApiNoteNote extends Schema.CollectionType {
     createdAt: Attribute.DateTime;
     createdBy: Attribute.Relation<'api::note.note', 'oneToOne', 'admin::user'> &
       Attribute.Private;
+    createdByUser: Attribute.Relation<
+      'api::note.note',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
     customer: Attribute.Relation<
       'api::note.note',
       'oneToOne',
@@ -642,6 +647,11 @@ export interface ApiNoteNote extends Schema.CollectionType {
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<'api::note.note', 'oneToOne', 'admin::user'> &
       Attribute.Private;
+    work_order: Attribute.Relation<
+      'api::note.note',
+      'manyToOne',
+      'api::work-order.work-order'
+    >;
   };
 }
 
@@ -852,6 +862,11 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'api::customer.customer'
     >;
     dueBy: Attribute.DateTime;
+    notes: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToMany',
+      'api::note.note'
+    >;
     private: Attribute.Boolean;
     property: Attribute.Relation<
       'api::work-order.work-order',
@@ -1293,6 +1308,8 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
     >;
     provider: Attribute.String;
     receiveAlarmNotifications: Attribute.Boolean;
+    receiveWorkOrderNotifications: Attribute.Boolean &
+      Attribute.DefaultTo<true>;
     resetPasswordToken: Attribute.String & Attribute.Private;
     role: Attribute.Relation<
       'plugin::users-permissions.user',

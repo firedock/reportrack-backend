@@ -30,8 +30,19 @@
       "relation": "oneToOne",
       "target": "api::customer.customer"
     },
+    "work_order": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::work-order.work-order",
+      "inversedBy": "notes"
+    },
     "private": {
       "type": "boolean"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
     }
   }
 }

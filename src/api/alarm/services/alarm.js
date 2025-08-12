@@ -312,18 +312,55 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         );
       }
 
+      // Send emails with detailed logging
+      let emailStats = {
+        total: optedInUsers.length,
+        attempted: 0,
+        successful: 0,
+        failed: 0,
+        skipped: 0
+      };
+
       for (const user of optedInUsers) {
+        if (!user.email) {
+          logs.push(`⚠️  Skipping user ${user.username || user.id}: no email address`);
+          emailStats.skipped++;
+          continue;
+        }
+        
+        emailStats.attempted++;
+        logs.push(`📧 Attempting to send alarm notification to ${user.email} (${user.username || user.name || 'Unknown'})...`);
+        
         try {
+          const emailStart = Date.now();
           await strapi.plugins['email'].services.email.send({
             ...emailContent,
             to: user.email,
             from: 'noreply@reportrack.com',
           });
-          logs.push(`✅ Email sent to ${user.email}`);
+          const emailDuration = Date.now() - emailStart;
+          logs.push(`✅ Alarm notification delivered successfully to ${user.email} (${emailDuration}ms)`);
+          emailStats.successful++;
         } catch (err) {
-          logs.push(`❌ Failed to send email to ${user.email}: ${err.message}`);
+          logs.push(`❌ Alarm notification delivery failed to ${user.email}: ${err.message}`);
+          logs.push(`   Error details: ${JSON.stringify({
+            code: err.code,
+            command: err.command,
+            response: err.response,
+            responseCode: err.responseCode
+          })}`);
+          emailStats.failed++;
         }
       }
+
+      // Summary statistics
+      logs.push(`📊 Alarm Notification Email Summary:`);
+      logs.push(`   • Total opted-in users: ${emailStats.total}`);
+      logs.push(`   • Attempted: ${emailStats.attempted}`);
+      logs.push(`   • Successful: ${emailStats.successful}`);
+      logs.push(`   • Failed: ${emailStats.failed}`);
+      logs.push(`   • Skipped (no email): ${emailStats.skipped}`);
+      logs.push(`   • Success rate: ${emailStats.attempted > 0 ? Math.round((emailStats.successful / emailStats.attempted) * 100) : 0}%`);
 
       // Update notified
       await strapi.db.query('api::alarm.alarm').update({

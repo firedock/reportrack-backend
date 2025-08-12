@@ -46,6 +46,12 @@
     },
     "private": {
       "type": "boolean"
+    },
+    "notes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::note.note",
+      "mappedBy": "work_order"
     }
   }
 }
