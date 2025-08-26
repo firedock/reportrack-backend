@@ -9,19 +9,19 @@ module.exports = {
       const knex = strapi.db.connection;
       const result = await knex.transaction(async (trx) => {
         // Lock the user row to prevent concurrent service record creation
-        await trx.raw(`
+        await knex.raw(`
           SELECT 1 FROM up_users 
           WHERE id = ? 
           FOR UPDATE
-        `, [data.users_permissions_user]);
+        `, [data.users_permissions_user]).transacting(trx);
 
         // Check for existing active records with explicit join to ensure consistency
-        const existingActiveRecords = await trx.raw(`
+        const existingActiveRecords = await knex.raw(`
           SELECT sr.id, sr.start_date_time 
           FROM service_records sr
           JOIN service_records_users_permissions_user_links ul ON sr.id = ul.service_record_id
           WHERE ul.user_id = ? AND sr.end_date_time IS NULL
-        `, [data.users_permissions_user]);
+        `, [data.users_permissions_user]).transacting(trx);
 
         // Handle different database drivers - some return 'rows', others return the array directly
         const rows = existingActiveRecords.rows || existingActiveRecords;

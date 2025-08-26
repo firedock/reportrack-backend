@@ -2,7 +2,48 @@ const dayjs = require('dayjs');
 
 module.exports = {
   async beforeCreate(event) {
-    // console.log('beforeCreate work-order');
+    const { data } = event.params;
+    const ctx = strapi.requestContext.get();
+    const user = ctx?.state?.user;
+    
+    // Set the createdBy field to the current user
+    if (user && !data.createdBy) {
+      data.createdBy = user.id;
+    }
+    
+    // If created by a customer and no status provided, set to "New"
+    if (user?.role?.name === 'Customer' && !data.status) {
+      data.status = 'New';
+    }
+    
+    // If no status provided at all, default to "New"
+    if (!data.status) {
+      data.status = 'New';
+    }
+  },
+  
+  async afterCreate(event) {
+    const { result } = event;
+    const ctx = strapi.requestContext.get();
+    const user = ctx?.state?.user;
+    
+    // Get the created work order with relations
+    const createdWorkOrder = await strapi.db.query('api::work-order.work-order').findOne({
+      where: { id: result.id },
+      populate: {
+        property: {
+          populate: ['users']
+        },
+        customer: {
+          populate: ['users']
+        }
+      }
+    });
+    
+    if (createdWorkOrder) {
+      // Send creation notification
+      await strapi.service('api::work-order.work-order').sendCreationNotification(createdWorkOrder, user);
+    }
   },
   
   async beforeUpdate(event) {

@@ -2,6 +2,7 @@
 'use strict';
 
 const { createCoreService } = require('@strapi/strapi').factories;
+const dayjs = require('dayjs');
 
 module.exports = createCoreService(
   'api::work-order.work-order',
@@ -97,6 +98,124 @@ module.exports = createCoreService(
           },
         },
       };
+    },
+
+    async sendCreationNotification(workOrder, creator) {
+      const logs = [];
+      
+      try {
+        const { property, customer, title, id, status, dueBy } = workOrder;
+        
+        // Collect all unique users from property and customer
+        const allUsers = new Set();
+        
+        // Add users from property
+        if (property?.users) {
+          property.users.forEach(user => allUsers.add(user));
+        }
+        
+        // Add users from customer
+        if (customer?.users) {
+          customer.users.forEach(user => allUsers.add(user));
+        }
+        
+        const uniqueUsers = Array.from(allUsers);
+        
+        // Filter users who have opted in to receive work order notifications
+        const optedInUsers = uniqueUsers.filter(user => user.receiveWorkOrderNotifications !== false);
+        
+        logs.push(`Work Order Creation: Found ${uniqueUsers.length} associated users`);
+        logs.push(`${optedInUsers.length} users opted in for notifications`);
+        
+        if (optedInUsers.length === 0) {
+          logs.push('No users opted in for work order notifications');
+          return logs;
+        }
+        
+        // Format due date
+        const dueDateFormatted = dueBy ? dayjs(dueBy).format('MM/DD/YYYY h:mmA') : 'Not set';
+        const propertyName = property?.name || 'Unknown Property';
+        const customerName = customer?.name || 'Unknown Customer';
+        const creatorName = creator?.username || creator?.name || 'System';
+        
+        const emailContent = {
+          subject: `New Work Order Created: ${title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1890ff;">New Work Order Created</h2>
+              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p><strong>Title:</strong> ${title}</p>
+                <p><strong>Property:</strong> ${propertyName}</p>
+                <p><strong>Customer:</strong> ${customerName}</p>
+                <p><strong>Status:</strong> ${status || 'New'}</p>
+                <p><strong>Due By:</strong> ${dueDateFormatted}</p>
+                <p><strong>Created By:</strong> ${creatorName}</p>
+              </div>
+              
+              <p style="margin-top: 20px;">
+                <a href="${process.env.PUBLIC_URL || 'http://localhost:3000'}/workOrders/detail?id=${id}" 
+                   style="background-color: #1890ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  View Work Order
+                </a>
+              </p>
+              
+              <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                This is an automated notification from Reportrack.
+              </p>
+            </div>
+          `,
+        };
+        
+        // Send emails to all opted-in users
+        let emailStats = {
+          total: optedInUsers.length,
+          attempted: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0
+        };
+
+        for (const user of optedInUsers) {
+          if (!user.email) {
+            logs.push(`⚠️  Skipping user ${user.username || user.id}: no email address`);
+            emailStats.skipped++;
+            continue;
+          }
+          
+          emailStats.attempted++;
+          logs.push(`📧 Attempting to send creation notification to ${user.email}...`);
+          
+          try {
+            const emailStart = Date.now();
+            await strapi.plugins['email'].services.email.send({
+              ...emailContent,
+              to: user.email,
+              from: 'noreply@reportrack.com',
+            });
+            const emailDuration = Date.now() - emailStart;
+            logs.push(`✅ Notification delivered successfully to ${user.email} (${emailDuration}ms)`);
+            emailStats.successful++;
+          } catch (err) {
+            logs.push(`❌ Notification delivery failed to ${user.email}: ${err.message}`);
+            emailStats.failed++;
+          }
+        }
+
+        // Summary
+        logs.push(`📊 Work Order Creation Notification Summary:`);
+        logs.push(`   • Total users: ${emailStats.total}`);
+        logs.push(`   • Successful: ${emailStats.successful}`);
+        logs.push(`   • Failed: ${emailStats.failed}`);
+        logs.push(`   • Success rate: ${emailStats.attempted > 0 ? Math.round((emailStats.successful / emailStats.attempted) * 100) : 0}%`);
+        
+        console.log('Work Order Creation Notification:', logs.join('\n'));
+        
+        return logs;
+      } catch (error) {
+        logs.push(`❌ Error sending creation notifications: ${error.message}`);
+        console.error('Work order creation notification error:', error);
+        return logs;
+      }
     },
 
     async sendChangeNotification(workOrder, changes) {
