@@ -5,11 +5,23 @@ module.exports = ({ env }) => ({
       providerOptions: {
         host: env('SMTP_HOST', 'west.exch091.serverdata.net'),
         port: env.int('SMTP_PORT', 587),
+        secure: false, // Use STARTTLS
         auth: {
           user: env('SMTP_USERNAME', 'noreply@reportrack.com'),
           pass: env('SMTP_PASSWORD'),
         },
-        tls: { ciphers: 'SSLv3' }, // Add TLS configuration
+        tls: {
+          rejectUnauthorized: false, // Allow self-signed certificates
+          ciphers: 'HIGH:!aNULL' // Use high-strength ciphers
+        },
+        // Connection pooling to reuse connections
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        // Timeouts
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,
+        socketTimeout: 30000,
       },
       settings: {
         defaultFrom: 'noreply@reportrack.com',
