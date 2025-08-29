@@ -11,21 +11,28 @@ dayjs.extend(timezone);
 module.exports = createCoreController('api::email-log.email-log', ({ strapi }) => ({
   async getTodaysLogs(ctx) {
     try {
-      const { timezone: userTimezone = 'America/Los_Angeles' } = ctx.query;
+      const { timezone } = ctx.query;
+      const userTimezone = Array.isArray(timezone) ? timezone[0] : (timezone || 'America/Los_Angeles');
       
       // Get start and end of today in user's timezone
       const todayStart = dayjs().tz(userTimezone).startOf('day').utc().toISOString();
       const todayEnd = dayjs().tz(userTimezone).endOf('day').utc().toISOString();
       
+      // Debug logging
+      console.log('Querying email logs for timezone:', userTimezone);
+      console.log('Date range:', { todayStart, todayEnd });
+      
       const logs = await strapi.db.query('api::email-log.email-log').findMany({
         where: {
-          createdAt: {
+          sentAt: {
             $gte: todayStart,
             $lte: todayEnd,
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { sentAt: 'desc' },
       });
+      
+      console.log('Found', logs.length, 'email logs');
       
       // Format logs for display
       const formattedLogs = logs.map(log => ({
@@ -65,7 +72,7 @@ module.exports = createCoreController('api::email-log.email-log', ({ strapi }) =
       });
     } catch (error) {
       console.error('Error fetching email logs:', error);
-      return ctx.badRequest('Error fetching email logs', { error });
+      return ctx.badRequest('Error fetching email logs');
     }
   },
 }));

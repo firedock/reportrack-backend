@@ -5,6 +5,7 @@ module.exports = {
       path: '/email-logs/today',
       handler: 'email-log.getTodaysLogs',
       config: {
+        auth: false,
         policies: [],
       },
     },

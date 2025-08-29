@@ -41,10 +41,7 @@ module.exports = {
       path: '/alarms/trigger',
       handler: 'alarm.triggerAlarms',
       config: {
-        auth: {
-          // Enable authentication
-          scope: ['authenticated'], // Optionally specify roles or permissions
-        },
+        auth: false, // Allow cron jobs to trigger without authentication
       },
     },
     {

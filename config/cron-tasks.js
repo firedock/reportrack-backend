@@ -17,6 +17,8 @@ module.exports = {
       let mongoClient;
 
       try {
+        // MongoDB temporarily disabled - connection issues
+        /*
         // Connect to MongoDB
         mongoClient = new MongoClient(mongoUri, {
           // @ts-ignore
@@ -26,6 +28,7 @@ module.exports = {
         await mongoClient.connect();
         const db = mongoClient.db(dbName);
         const collection = db.collection(collectionName);
+        */
 
         // Call the API
         const response = await axios.post(
@@ -38,14 +41,17 @@ module.exports = {
           }
         );
 
-        // console.log('API response:', response.data);
-
+        console.log('API response received successfully');
+        
+        // MongoDB storage temporarily disabled
+        /*
         // Store the API response in MongoDB
         const result = await collection.insertOne({
           timestamp,
           response: response.data, // Store the API response
         });
         console.log('Response stored in MongoDB:', result.insertedId);
+        */
       } catch (error) {
         console.error('Error triggering alarm API:', error.message);
         console.error('Full error details:', error.response?.data || error);
