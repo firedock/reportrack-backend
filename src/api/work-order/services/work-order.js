@@ -195,9 +195,47 @@ module.exports = createCoreService(
             const emailDuration = Date.now() - emailStart;
             logs.push(`✅ Notification delivered successfully to ${user.email} (${emailDuration}ms)`);
             emailStats.successful++;
+            
+            // Log successful email
+            await strapi.service('api::email-log.email-log').logEmail({
+              to: user.email,
+              subject: emailContent.subject,
+              trigger: 'work_order_creation',
+              triggerDetails: {
+                workOrderId: id,
+                workOrderTitle: title,
+                propertyName,
+                customerName,
+                creatorName,
+                username: user.username || user.name || 'Unknown',
+              },
+              status: 'success',
+              deliveryTime: emailDuration,
+              relatedEntity: 'work-order',
+              relatedEntityId: id,
+            });
           } catch (err) {
             logs.push(`❌ Notification delivery failed to ${user.email}: ${err.message}`);
             emailStats.failed++;
+            
+            // Log failed email
+            await strapi.service('api::email-log.email-log').logEmail({
+              to: user.email,
+              subject: emailContent.subject,
+              trigger: 'work_order_creation',
+              triggerDetails: {
+                workOrderId: id,
+                workOrderTitle: title,
+                propertyName,
+                customerName,
+                creatorName,
+                username: user.username || user.name || 'Unknown',
+              },
+              status: 'failed',
+              error: err.message,
+              relatedEntity: 'work-order',
+              relatedEntityId: id,
+            });
           }
         }
 

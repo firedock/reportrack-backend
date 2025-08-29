@@ -1,0 +1,63 @@
+{
+  "kind": "collectionType",
+  "collectionName": "email_logs",
+  "info": {
+    "singularName": "email-log",
+    "pluralName": "email-logs",
+    "displayName": "Email Log",
+    "description": "Logs of all emails sent by the system"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "to": {
+      "type": "string",
+      "required": true
+    },
+    "from": {
+      "type": "string",
+      "required": true
+    },
+    "subject": {
+      "type": "string",
+      "required": true
+    },
+    "trigger": {
+      "type": "enumeration",
+      "enum": [
+        "alarm_notification",
+        "work_order_note",
+        "work_order_creation",
+        "work_order_update",
+        "service_record",
+        "manual",
+        "other"
+      ],
+      "required": true
+    },
+    "triggerDetails": {
+      "type": "json"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["success", "failed"],
+      "required": true
+    },
+    "error": {
+      "type": "text"
+    },
+    "sentAt": {
+      "type": "datetime"
+    },
+    "deliveryTime": {
+      "type": "integer"
+    },
+    "relatedEntity": {
+      "type": "string"
+    },
+    "relatedEntityId": {
+      "type": "integer"
+    }
+  }
+}

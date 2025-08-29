@@ -578,6 +578,57 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
   };
 }
 
+export interface ApiEmailLogEmailLog extends Schema.CollectionType {
+  collectionName: 'email_logs';
+  info: {
+    description: 'Logs of all emails sent by the system';
+    displayName: 'Email Log';
+    pluralName: 'email-logs';
+    singularName: 'email-log';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::email-log.email-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    deliveryTime: Attribute.Integer;
+    error: Attribute.Text;
+    from: Attribute.String & Attribute.Required;
+    relatedEntity: Attribute.String;
+    relatedEntityId: Attribute.Integer;
+    sentAt: Attribute.DateTime;
+    status: Attribute.Enumeration<['success', 'failed']> & Attribute.Required;
+    subject: Attribute.String & Attribute.Required;
+    to: Attribute.String & Attribute.Required;
+    trigger: Attribute.Enumeration<
+      [
+        'alarm_notification',
+        'work_order_note',
+        'work_order_creation',
+        'work_order_update',
+        'service_record',
+        'manual',
+        'other'
+      ]
+    > &
+      Attribute.Required;
+    triggerDetails: Attribute.JSON;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::email-log.email-log',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiLoginPageLoginPage extends Schema.SingleType {
   collectionName: 'login_pages';
   info: {
@@ -1349,6 +1400,7 @@ declare module '@strapi/types' {
       'api::alarm.alarm': ApiAlarmAlarm;
       'api::audit-log.audit-log': ApiAuditLogAuditLog;
       'api::customer.customer': ApiCustomerCustomer;
+      'api::email-log.email-log': ApiEmailLogEmailLog;
       'api::login-page.login-page': ApiLoginPageLoginPage;
       'api::note.note': ApiNoteNote;
       'api::property.property': ApiPropertyProperty;

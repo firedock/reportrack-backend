@@ -211,6 +211,27 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
           const emailDuration = Date.now() - emailStart;
           logs.push(`✅ Note notification delivered successfully to ${user.email} (${emailDuration}ms)`);
           emailStats.successful++;
+          
+          // Log successful email
+          await strapi.service('api::email-log.email-log').logEmail({
+            to: user.email,
+            subject: emailContent.subject,
+            trigger: 'work_order_note',
+            triggerDetails: {
+              noteId: note.id,
+              workOrderId: work_order.id,
+              workOrderTitle,
+              propertyName,
+              customerName,
+              creatorName,
+              username: user.username || user.name || 'Unknown',
+              isCreator,
+            },
+            status: 'success',
+            deliveryTime: emailDuration,
+            relatedEntity: 'note',
+            relatedEntityId: note.id,
+          });
         } catch (err) {
           logs.push(`❌ Note notification delivery failed to ${user.email}: ${err.message}`);
           logs.push(`   Error details: ${JSON.stringify({
@@ -220,6 +241,27 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
             responseCode: err.responseCode
           })}`);
           emailStats.failed++;
+          
+          // Log failed email
+          await strapi.service('api::email-log.email-log').logEmail({
+            to: user.email,
+            subject: emailContent.subject,
+            trigger: 'work_order_note',
+            triggerDetails: {
+              noteId: note.id,
+              workOrderId: work_order.id,
+              workOrderTitle,
+              propertyName,
+              customerName,
+              creatorName,
+              username: user.username || user.name || 'Unknown',
+              isCreator,
+            },
+            status: 'failed',
+            error: err.message,
+            relatedEntity: 'note',
+            relatedEntityId: note.id,
+          });
         }
       }
 

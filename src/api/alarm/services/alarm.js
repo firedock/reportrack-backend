@@ -341,6 +341,24 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           const emailDuration = Date.now() - emailStart;
           logs.push(`✅ Alarm notification delivered successfully to ${user.email} (${emailDuration}ms)`);
           emailStats.successful++;
+          
+          // Log successful email
+          await strapi.service('api::email-log.email-log').logEmail({
+            to: user.email,
+            subject: emailContent.subject,
+            trigger: 'alarm_notification',
+            triggerDetails: {
+              alarmId: alarm.id,
+              propertyName: property.name,
+              propertyId: property.id,
+              alarmType: type,
+              username: user.username || user.name || 'Unknown',
+            },
+            status: 'success',
+            deliveryTime: emailDuration,
+            relatedEntity: 'alarm',
+            relatedEntityId: alarm.id,
+          });
         } catch (err) {
           logs.push(`❌ Alarm notification delivery failed to ${user.email}: ${err.message}`);
           logs.push(`   Error details: ${JSON.stringify({
@@ -350,6 +368,24 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             responseCode: err.responseCode
           })}`);
           emailStats.failed++;
+          
+          // Log failed email
+          await strapi.service('api::email-log.email-log').logEmail({
+            to: user.email,
+            subject: emailContent.subject,
+            trigger: 'alarm_notification',
+            triggerDetails: {
+              alarmId: alarm.id,
+              propertyName: property.name,
+              propertyId: property.id,
+              alarmType: type,
+              username: user.username || user.name || 'Unknown',
+            },
+            status: 'failed',
+            error: err.message,
+            relatedEntity: 'alarm',
+            relatedEntityId: alarm.id,
+          });
         }
       }
 
