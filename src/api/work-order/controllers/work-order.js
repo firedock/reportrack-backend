@@ -26,6 +26,27 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+
+    async countPost(ctx) {
+      try {
+        // Extract filters from the request body
+        const { filters } = ctx.request.body || {};
+
+        // Fetch total count of work orders with optional filters
+        const totalWorkOrders = await strapi
+          .query('api::work-order.work-order')
+          .count({ where: filters });
+
+        // Prepare the response
+        const response = { count: totalWorkOrders };
+
+        // Send the response
+        ctx.send(response);
+      } catch (error) {
+        // Send the error response
+        ctx.send({ error: error.message });
+      }
+    },
     async find(ctx) {
       const user = ctx.state.user; // Get the authenticated user
       // Use the service to fetch the records based on user filters

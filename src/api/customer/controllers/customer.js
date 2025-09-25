@@ -29,6 +29,27 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+
+    async countPost(ctx) {
+      try {
+        // Extract filters from the request body
+        const { filters } = ctx.request.body || {};
+
+        // Fetch total count of with optional filters
+        const total = await strapi
+          .query('api::customer.customer')
+          .count({ where: filters });
+
+        // Prepare the response
+        const response = { count: total };
+
+        // Send the response
+        ctx.send(response);
+      } catch (error) {
+        // Send the error response
+        ctx.send({ error: error.message });
+      }
+    },
     async getCustomerUsersWithoutProperties(ctx) {
       try {
         const result = await strapi.db.connection.raw(`

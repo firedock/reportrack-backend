@@ -7,6 +7,12 @@ module.exports = {
       config: {},
     },
     {
+      method: 'POST',
+      path: '/alarms/custom/count-post',
+      handler: 'alarm.countPost',
+      config: {},
+    },
+    {
       method: 'GET',
       path: '/alarms/custom/alarms', // Path for getting all alarms
       handler: 'alarm.getAllAlarms', // Controller method to handle this request

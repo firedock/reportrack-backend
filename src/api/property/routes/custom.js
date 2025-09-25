@@ -9,6 +9,14 @@ module.exports = {
       },
     },
     {
+      method: 'POST',
+      path: '/properties/custom/count-post',
+      handler: 'property.countPost',
+      config: {
+        // policies: ['global::isOwner'],
+      },
+    },
+    {
       method: 'GET',
       path: '/properties/custom/locationScan',
       handler: 'property.locationScans',

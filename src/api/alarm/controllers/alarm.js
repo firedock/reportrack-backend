@@ -38,6 +38,37 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
       ctx.send({ error: error.message });
     }
   },
+
+  async countPost(ctx) {
+    try {
+      const { filters = {} } = ctx.request.body;
+      const user = ctx.state.user;
+      const userRole = user?.role?.name;
+
+      if (userRole === 'Customer') {
+        const userProperties = await strapi.db
+          .query('api::property.property')
+          .findMany({
+            where: { users: { id: user.id } }, // Fetch properties associated with the user
+            select: ['id'],
+          });
+
+        const allowedPropertyIds = userProperties.map((p) => p.id);
+
+        filters.property = {
+          id: { $in: allowedPropertyIds },
+        };
+      }
+
+      const total = await strapi
+        .query('api::alarm.alarm')
+        .count({ where: filters });
+
+      ctx.send({ count: total });
+    } catch (error) {
+      ctx.send({ error: error.message });
+    }
+  },
   async triggerAlarms(ctx) {
     try {
       // Call the custom service logic to check and trigger alarms

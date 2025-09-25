@@ -9,6 +9,14 @@ module.exports = {
       },
     },
     {
+      method: 'POST',
+      path: '/customers/custom/count-post',
+      handler: 'customer.countPost',
+      config: {
+        auth: false,
+      },
+    },
+    {
       method: 'GET',
       path: '/customers/custom/customer-users-without-properties',
       handler: 'customer.getCustomerUsersWithoutProperties',

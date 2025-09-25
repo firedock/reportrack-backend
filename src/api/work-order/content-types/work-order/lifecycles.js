@@ -5,17 +5,38 @@ module.exports = {
     const { data } = event.params;
     const ctx = strapi.requestContext.get();
     const user = ctx?.state?.user;
-    
+
+    console.log('Work Order beforeCreate - user context:', {
+      hasCtx: !!ctx,
+      hasUser: !!user,
+      userId: user?.id,
+      userName: user?.username,
+      userEmail: user?.email,
+      dataCreatedBy: data.createdBy
+    });
+
     // Set the createdBy field to the current user
-    if (user && !data.createdBy) {
-      data.createdBy = user.id;
+    if (user && user.id && !data.createdBy) {
+      // Verify user exists in database before setting
+      const userExists = await strapi.db.query('plugin::users-permissions.user').findOne({
+        where: { id: user.id }
+      });
+
+      if (userExists) {
+        data.createdBy = user.id;
+        console.log(`Setting createdBy to user ${user.id} (${user.username})`);
+      } else {
+        console.error(`User ${user.id} not found in database, not setting createdBy`);
+      }
+    } else if (!data.createdBy) {
+      console.warn('No user context available and no createdBy provided');
     }
-    
+
     // If created by a customer and no status provided, set to "New"
     if (user?.role?.name === 'Customer' && !data.status) {
       data.status = 'New';
     }
-    
+
     // If no status provided at all, default to "New"
     if (!data.status) {
       data.status = 'New';
