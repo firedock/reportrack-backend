@@ -38,6 +38,8 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           endTime,
           startTimeDelay = 10,
           endTimeDelay = 10,
+          startAlarmDisabled = false,
+          endAlarmDisabled = false,
           timezone: alarmTimezone = 'UTC',
           daysOfWeek,
           property,
@@ -58,6 +60,16 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         );
         logs.push(`- Alarm days: ${daysOfWeek.join(', ')}`);
         logs.push(`- Current day: ${currentDay}`);
+        logs.push(`- Start Alarm Enabled: ${!startAlarmDisabled}`);
+        logs.push(`- End Alarm Enabled: ${!endAlarmDisabled}`);
+
+        // Skip if both alarms are disabled
+        if (startAlarmDisabled && endAlarmDisabled) {
+          logs.push(
+            `- Skipping alarm ID ${id}: Both start and end alarms are disabled.`
+          );
+          continue;
+        }
 
         // Skip alarm if it's not scheduled for the current day
         if (!daysOfWeek.includes(currentDay)) {
@@ -86,58 +98,79 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
 
         const todayStartUtc = todayStartLocal.utc().toISOString();
 
-        // Parse and calculate trigger times in the alarm's timezone
-        const alarmStartTime = dayjs
-          .tz(
-            `${todayStartLocal.format('YYYY-MM-DD')}T${startTime}`,
-            alarmTimezone
-          )
-          .add(startTimeDelay, 'minute');
+        // Parse and calculate trigger times in the alarm's timezone (only if enabled)
+        let alarmStartTime, alarmEndTime, alarmStartTimeUtc, alarmEndTimeUtc;
 
-        const alarmEndTime = dayjs
-          .tz(
-            `${todayStartLocal.format('YYYY-MM-DD')}T${endTime}`,
-            alarmTimezone
-          )
-          .add(endTimeDelay, 'minute');
+        if (!startAlarmDisabled && startTime) {
+          alarmStartTime = dayjs
+            .tz(
+              `${todayStartLocal.format('YYYY-MM-DD')}T${startTime}`,
+              alarmTimezone
+            )
+            .add(startTimeDelay, 'minute');
+          alarmStartTimeUtc = alarmStartTime.utc().toISOString();
+          const alarmStartTimeLocal = alarmStartTime.format('MM/DD/YYYY hh:mm A');
+          logs.push(`- Alarm Start Time (Local): ${alarmStartTimeLocal}`);
+        } else {
+          logs.push(`- Alarm Start Time: Disabled`);
+        }
 
-        const alarmStartTimeUtc = alarmStartTime.utc().toISOString();
-        const alarmEndTimeUtc = alarmEndTime.utc().toISOString();
+        if (!endAlarmDisabled && endTime) {
+          alarmEndTime = dayjs
+            .tz(
+              `${todayStartLocal.format('YYYY-MM-DD')}T${endTime}`,
+              alarmTimezone
+            )
+            .add(endTimeDelay, 'minute');
+          alarmEndTimeUtc = alarmEndTime.utc().toISOString();
+          const alarmEndTimeLocal = alarmEndTime.format('MM/DD/YYYY hh:mm A');
+          logs.push(`- Alarm End Time (Local): ${alarmEndTimeLocal}`);
+        } else {
+          logs.push(`- Alarm End Time: Disabled`);
+        }
 
-        // Log alarm times in the alarm's timezone
-        const alarmStartTimeLocal = alarmStartTime.format('MM/DD/YYYY hh:mm A');
-        const alarmEndTimeLocal = alarmEndTime.format('MM/DD/YYYY hh:mm A');
+        // Check if the alarm is past due (for enabled alarms)
+        // Only check start time if start alarm is enabled
+        if (!startAlarmDisabled && alarmStartTimeUtc && currentTimeUtc.isBefore(alarmStartTimeUtc)) {
+          logs.push(`- Skipping alarm ID ${id}: Start alarm is not past due yet.`);
+          continue;
+        }
 
-        logs.push(`- Alarm Start Time (Local): ${alarmStartTimeLocal}`);
-        logs.push(`- Alarm End Time (Local): ${alarmEndTimeLocal}`);
-
-        // Check if the alarm is past due
-        if (currentTimeUtc.isBefore(alarmStartTimeUtc)) {
-          logs.push(`- Skipping alarm ID ${id}: Alarm is not past due yet.`);
+        // If only end alarm is enabled, check if we're past that time
+        if (startAlarmDisabled && !endAlarmDisabled && alarmEndTimeUtc && currentTimeUtc.isBefore(alarmEndTimeUtc)) {
+          logs.push(`- Skipping alarm ID ${id}: End alarm is not past due yet.`);
           continue;
         }
 
         logs.push(`- Alarm Service Type: ${alarmServiceType?.service}`);
+
+        // Build time range conditions based on which alarms are enabled
+        const timeConditions = [];
+
+        if (!startAlarmDisabled && alarmStartTimeUtc) {
+          timeConditions.push({
+            startDateTime: {
+              $lte: alarmStartTimeUtc,
+              $gte: todayStartUtc,
+            },
+          });
+        }
+
+        if (!endAlarmDisabled && alarmEndTimeUtc) {
+          timeConditions.push({
+            endDateTime: {
+              $lte: alarmEndTimeUtc,
+              $gte: todayStartUtc,
+            },
+          });
+        }
 
         // Service record query using property, service_type, and time range
         const query = {
           where: {
             property: property.id,
             service_type: alarmServiceType?.id,
-            $or: [
-              {
-                startDateTime: {
-                  $lte: alarmStartTimeUtc,
-                  $gte: todayStartUtc,
-                },
-              },
-              {
-                endDateTime: {
-                  $lte: alarmEndTimeUtc,
-                  $gte: todayStartUtc,
-                },
-              },
-            ],
+            ...(timeConditions.length > 0 && { $or: timeConditions }),
           },
           populate: { service_type: true },
         };
@@ -153,13 +186,15 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           (record) => record?.service_type?.id === alarmServiceType?.id
         );
 
-        const serviceHasStarted = serviceRecords.some(
+        // Only check start time if start alarm is enabled
+        const serviceHasStarted = startAlarmDisabled ? true : serviceRecords.some(
           (record) =>
             dayjs(record.startDateTime).isSameOrBefore(alarmStartTimeUtc) &&
             dayjs(record.startDateTime).isSameOrAfter(todayStartUtc)
         );
 
-        const serviceHasEnded = serviceRecords.some(
+        // Only check end time if end alarm is enabled
+        const serviceHasEnded = endAlarmDisabled ? true : serviceRecords.some(
           (record) =>
             record.endDateTime &&
             dayjs(record.endDateTime).isSameOrBefore(alarmEndTimeUtc) &&
@@ -179,8 +214,8 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         }
 
         logs.push(`- Service type match: ${serviceMatches}`);
-        logs.push(`- Service Record Started On Time: ${serviceHasStarted}`);
-        logs.push(`- Service Record Ended On Time: ${serviceHasEnded}`);
+        logs.push(`- Service Record Started On Time: ${serviceHasStarted}${startAlarmDisabled ? ' (start alarm disabled - skipped)' : ''}`);
+        logs.push(`- Service Record Ended On Time: ${serviceHasEnded}${endAlarmDisabled ? ' (end alarm disabled - skipped)' : ''}`);
 
         if (!serviceMatches || (!serviceHasStarted && !serviceHasEnded) || !servicePersonMatches) {
           const reasons = [];
