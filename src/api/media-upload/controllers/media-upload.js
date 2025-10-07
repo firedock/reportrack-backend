@@ -66,28 +66,9 @@ module.exports = {
             
             const updatedFile = await strapi.plugins.upload.services.upload.update(file.id, strapiUpdateData);
             console.log(`📝 Updated Strapi fields for file ${file.id}`);
-            
-            // Update custom fields directly in database
-            if (updateData.upload_time || updateData.gps_latitude || updateData.gps_longitude) {
-              console.log('🗄️ Updating custom fields directly in database...');
-              
-              const query = strapi.db.connection.raw(`
-                UPDATE files 
-                SET 
-                  upload_time = ?,
-                  gps_latitude = ?,
-                  gps_longitude = ?
-                WHERE id = ?
-              `, [
-                updateData.upload_time || null,
-                updateData.gps_latitude || null, 
-                updateData.gps_longitude || null,
-                file.id
-              ]);
-              
-              await query;
-              console.log(`🗄️ Successfully updated database fields for file ${file.id}`);
-            }
+
+            // GPS and timestamp are already stored in provider_metadata
+            // No need for custom database fields
             
             // Add updated file with metadata to final results
             finalFiles.push({

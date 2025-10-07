@@ -81,5 +81,30 @@ module.exports = createCoreController(
       );
       return updatedResponse;
     },
+
+    // Override findOne to always populate media
+    async findOne(ctx) {
+      const { id } = ctx.params;
+
+      const entity = await strapi.entityService.findOne(
+        'api::service-record.service-record',
+        id,
+        {
+          populate: {
+            users_permissions_user: true,
+            account: true,
+            property: true,
+            customer: true,
+            service_type: true,
+            author: true,
+            editor: true,
+            media: true, // Explicitly populate media
+          },
+        }
+      );
+
+      const sanitizedEntity = await this.sanitizeOutput(entity, ctx);
+      return this.transformResponse(sanitizedEntity);
+    },
   })
 );

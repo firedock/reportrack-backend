@@ -33,14 +33,18 @@ module.exports = ({ env }) => ({
     config: {
       provider: '@strapi/provider-upload-aws-s3',
       providerOptions: {
-        accessKeyId: env('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: env('AWS_ACCESS_SECRET'),
-        region: env('AWS_REGION'),
         baseUrl: `https://${env('AWS_BUCKET_NAME')}.s3.${env(
           'AWS_REGION'
-        )}.amazonaws.com`, // ✅ Add this!
-        params: {
-          Bucket: env('AWS_BUCKET_NAME'),
+        )}.amazonaws.com`,
+        s3Options: {
+          credentials: {
+            accessKeyId: env('AWS_ACCESS_KEY_ID'),
+            secretAccessKey: env('AWS_ACCESS_SECRET'),
+          },
+          region: env('AWS_REGION'),
+          params: {
+            Bucket: env('AWS_BUCKET_NAME'),
+          },
         },
       },
     },
