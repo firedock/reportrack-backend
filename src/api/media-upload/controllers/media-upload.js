@@ -97,7 +97,14 @@ module.exports = {
       ctx.body = finalFiles;
     } catch (error) {
       console.error('❌ Upload error:', error);
-      ctx.throw(500, 'Upload failed');
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Request details:', {
+        hasFiles: !!ctx.request.files,
+        filesKeys: ctx.request.files ? Object.keys(ctx.request.files) : 'no files',
+        hasBody: !!ctx.request.body,
+        bodyKeys: ctx.request.body ? Object.keys(ctx.request.body) : 'no body'
+      });
+      ctx.throw(500, `Upload failed: ${error.message}`);
     }
   },
 };
