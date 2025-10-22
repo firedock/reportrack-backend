@@ -153,7 +153,7 @@ module.exports = createCoreService(
               </div>
               
               <p style="margin-top: 20px;">
-                <a href="${process.env.PUBLIC_URL || 'http://localhost:3000'}/workOrders/detail?id=${id}" 
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/workOrders/detail?id=${id}"
                    style="background-color: #1890ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   View Work Order
                 </a>

@@ -913,6 +913,7 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'api::customer.customer'
     >;
     dueBy: Attribute.DateTime;
+    media: Attribute.Media<'images' | 'files' | 'videos', true>;
     notes: Attribute.Relation<
       'api::work-order.work-order',
       'oneToMany',

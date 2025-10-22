@@ -167,12 +167,19 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
             <p><strong>Property:</strong> ${propertyName}</p>
             <p><strong>Customer:</strong> ${customerName}</p>
             <p><strong>Note by:</strong> ${creatorName}</p>
-            
+
             <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
               <h4 style="margin-top: 0; color: #666;">Note:</h4>
               <p style="margin-bottom: 0; white-space: pre-wrap;">${notePreview}</p>
             </div>
-            
+
+            <p style="margin-top: 20px;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/workOrders/detail?id=${work_order.id}"
+                 style="background-color: #1890ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Work Order
+              </a>
+            </p>
+
             <p style="margin-top: 20px; color: #666; font-size: 12px;">
               This is an automated notification from Reportrack.
             </p>

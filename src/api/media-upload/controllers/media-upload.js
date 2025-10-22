@@ -94,7 +94,9 @@ module.exports = {
         finalFiles.push(...uploadedFiles);
       }
 
-      ctx.body = finalFiles;
+      // Return files directly without Strapi's data wrapper
+      // This prevents the {data: {undefined: [...]}} wrapping issue
+      return finalFiles;
     } catch (error) {
       console.error('❌ Upload error:', error);
       console.error('❌ Error stack:', error.stack);

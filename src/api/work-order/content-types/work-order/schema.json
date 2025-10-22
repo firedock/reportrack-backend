@@ -52,6 +52,12 @@
       "relation": "oneToMany",
       "target": "api::note.note",
       "mappedBy": "work_order"
+    },
+    "media": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": ["images", "files", "videos"]
     }
   }
 }
