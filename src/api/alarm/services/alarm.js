@@ -312,9 +312,97 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         .tz(timezone)
         .format('MM/DD/YYYY hh:mm A');
 
+      // Build service records details table
+      const serviceRecordsDetails =
+        serviceRecordsForDay.length > 0
+          ? `
+    <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+      <thead>
+        <tr>
+          <th>Service Record ID</th>
+          <th>Start Time (Local)</th>
+          <th>End Time (Local)</th>
+          <th>Service Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${serviceRecordsForDay
+          .map((record) => {
+            const startTimeLocal = dayjs
+              .utc(record.startDateTime)
+              .tz(timezone)
+              .format('MM/DD/YYYY hh:mm:ss A');
+
+            const endTimeLocal = record.endDateTime
+              ? dayjs
+                  .utc(record.endDateTime)
+                  .tz(timezone)
+                  .format('MM/DD/YYYY hh:mm:ss A')
+              : 'N/A';
+
+            return `
+            <tr>
+              <td>${record.id}</td>
+              <td>${startTimeLocal}</td>
+              <td>${endTimeLocal}</td>
+              <td>${record?.service_type?.service || 'N/A'}</td>
+            </tr>
+          `;
+          })
+          .join('')}
+      </tbody>
+    </table>
+  `
+          : '<p>No service records found for today.</p>';
+
       const emailContent = {
         subject: `Alarm ${type} Notification for ${property.name}`,
-        html: `<p>The ${type} alarm for "<strong>${property.name}</strong>" was triggered.</p>`,
+        html: `
+          <p>The ${type} alarm for property "<strong>${
+          property.name
+        }</strong>" (Customer: <strong>${
+          customer?.name || 'N/A'
+        }</strong>) has been triggered.</p>
+
+          <h3>Alarm Details:</h3>
+          <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td><strong>Alarm ID</strong></td>
+              <td>${alarm.id}</td>
+            </tr>
+            <tr>
+              <td><strong>Alarm Timezone</strong></td>
+              <td>${timezone || 'UTC'}</td>
+            </tr>
+            <tr>
+              <td><strong>Alarm Start Time (Local)</strong></td>
+              <td>${alarmStartLocal}</td>
+            </tr>
+            <tr>
+              <td><strong>Alarm End Time (Local)</strong></td>
+              <td>${alarmEndLocal}</td>
+            </tr>
+            <tr>
+              <td><strong>Service Type</strong></td>
+              <td>${service_type?.service || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td><strong>Active Days</strong></td>
+              <td>${daysOfWeek.join(', ')}</td>
+            </tr>
+            <tr>
+              <td><strong>Status</strong></td>
+              <td>${alarm.active ? 'Active' : 'Inactive'}</td>
+            </tr>
+            <tr>
+              <td><strong>Last Notified</strong></td>
+              <td>${notified || 'Never'}</td>
+            </tr>
+          </table>
+
+          <h3>Service Records Found for the subject property today:</h3>
+          ${serviceRecordsDetails}
+        `,
       };
 
       const roleToNotify =
