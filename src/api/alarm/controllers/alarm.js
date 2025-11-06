@@ -71,6 +71,16 @@ module.exports = createCoreController('api::alarm.alarm', ({ strapi }) => ({
   },
   async triggerAlarms(ctx) {
     try {
+      // Check if cron is enabled via environment variable
+      const cronEnabled = process.env.CRON_ENABLED !== 'false';
+
+      if (!cronEnabled) {
+        return ctx.send({
+          message: 'Alarm triggering is disabled (CRON_ENABLED=false)',
+          logs: [`[${new Date().toISOString()}] Alarm checks skipped - CRON_ENABLED is false`],
+        });
+      }
+
       // Call the custom service logic to check and trigger alarms
       const logs = await strapi.service('api::alarm.alarm').checkAlarms();
 
