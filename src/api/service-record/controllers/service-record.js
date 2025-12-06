@@ -106,5 +106,88 @@ module.exports = createCoreController(
       const sanitizedEntity = await this.sanitizeOutput(entity, ctx);
       return this.transformResponse(sanitizedEntity);
     },
+
+    async reportIncident(ctx) {
+      try {
+        const { id } = ctx.params;
+        const { description, severity, category, location, mediaIds } = ctx.request.body;
+        const user = ctx.state.user;
+
+        console.log('📝 reportIncident called for service record:', id);
+        console.log('📝 Request body:', JSON.stringify(ctx.request.body));
+        console.log('📝 User:', user?.id, user?.username);
+
+        // Check if user is authenticated
+        if (!user) {
+          console.error('❌ No authenticated user');
+          return ctx.unauthorized('You must be logged in to report an incident');
+        }
+
+        // Validate required fields
+        if (!description) {
+          console.error('❌ Missing description');
+          return ctx.badRequest('Description is required');
+        }
+
+        // Get current service record with deep population for notifications
+        console.log('📝 Fetching service record...');
+        const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
+          where: { id },
+          populate: {
+            property: { populate: { users: true, customer: { populate: ['users'] } } },
+            customer: { populate: ['users'] },
+            users_permissions_user: true,
+            service_type: true,
+          }
+        });
+
+        if (!serviceRecord) {
+          console.error('❌ Service record not found:', id);
+          return ctx.notFound('Service record not found');
+        }
+
+        console.log('✅ Service record found:', serviceRecord.id);
+
+        // Create incident object
+        const incident = {
+          id: require('crypto').randomUUID(),
+          description,
+          severity: severity || 'medium',
+          category: category || 'other',
+          reportedAt: new Date().toISOString(),
+          reportedBy: { id: user.id, username: user.username, email: user.email },
+          location: location || null,
+          mediaIds: mediaIds || [],
+          notificationSent: false
+        };
+
+        console.log('📝 Created incident:', incident.id);
+
+        // Update service record with incident
+        const existingIncidents = serviceRecord.incidents || [];
+        console.log('📝 Existing incidents count:', existingIncidents.length);
+
+        const updatedRecord = await strapi.entityService.update('api::service-record.service-record', id, {
+          data: {
+            incidents: [...existingIncidents, incident],
+            hasReportedIssues: true
+          }
+        });
+
+        console.log('✅ Service record updated with incident');
+
+        // Send notification (don't let notification failure block response)
+        try {
+          await strapi.service('api::service-record.service-record').sendIncidentNotification(serviceRecord, incident);
+        } catch (err) {
+          console.error('⚠️ Error sending incident notification:', err);
+        }
+
+        return { data: updatedRecord, incident };
+      } catch (error) {
+        console.error('❌ reportIncident error:', error);
+        return ctx.internalServerError(`Failed to report incident: ${error.message}`);
+      }
+    },
   })
 );

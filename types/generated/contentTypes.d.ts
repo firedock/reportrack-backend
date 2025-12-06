@@ -808,6 +808,8 @@ export interface ApiServiceRecordServiceRecord extends Schema.CollectionType {
       'plugin::users-permissions.user'
     >;
     endDateTime: Attribute.DateTime;
+    hasReportedIssues: Attribute.Boolean & Attribute.DefaultTo<false>;
+    incidents: Attribute.JSON;
     locationScans: Attribute.JSON;
     media: Attribute.Media<'images', true>;
     note: Attribute.Text;
@@ -1360,6 +1362,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
     >;
     provider: Attribute.String;
     receiveAlarmNotifications: Attribute.Boolean;
+    receiveIncidentNotifications: Attribute.Boolean & Attribute.DefaultTo<true>;
     receiveWorkOrderNotifications: Attribute.Boolean &
       Attribute.DefaultTo<true>;
     resetPasswordToken: Attribute.String & Attribute.Private;

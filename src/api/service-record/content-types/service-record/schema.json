@@ -69,6 +69,13 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user"
+    },
+    "hasReportedIssues": {
+      "type": "boolean",
+      "default": false
+    },
+    "incidents": {
+      "type": "json"
     }
   }
 }

@@ -16,6 +16,15 @@ module.exports = {
         // policies: ['global::isOwner'],
       },
     },
+    // More specific route must come BEFORE the general :id route
+    {
+      method: 'POST',
+      path: '/service-records/:id/incidents',
+      handler: 'service-record.reportIncident',
+      config: {
+        // policies: ['global::isOwner'],
+      },
+    },
     {
       method: 'GET',
       path: '/service-records/:id',

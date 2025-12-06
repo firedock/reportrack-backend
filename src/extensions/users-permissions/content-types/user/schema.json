@@ -93,6 +93,10 @@
       "type": "boolean",
       "default": true
     },
+    "receiveIncidentNotifications": {
+      "type": "boolean",
+      "default": true
+    },
     "phone": {
       "type": "string"
     },
