@@ -11,7 +11,39 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
     const page = queryParams?.pagination?.page || 1;
     const pageSize = queryParams?.pagination?.pageSize || 25;
     const sort = queryParams?.sort || 'createdAt:desc';
-    const filters = queryParams?.filters || {};
+    const rawFilters = queryParams?.filters || {};
+
+    // Transform REST API filters to Query Engine format
+    // Converts { service_record: { id: { $eq: "29599" } } } to { service_record: { id: 29599 } }
+    const transformFilters = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+
+      const result = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value && typeof value === 'object') {
+          // Handle $eq operator - extract the value
+          if ('$eq' in value) {
+            const eqValue = value.$eq;
+            // Convert to number if it looks like a number
+            result[key] = !isNaN(eqValue) && eqValue !== '' ? Number(eqValue) : eqValue;
+          } else {
+            // Recurse into nested objects
+            result[key] = transformFilters(value);
+          }
+        } else {
+          result[key] = value;
+        }
+      }
+      return result;
+    };
+
+    const filters = transformFilters(rawFilters);
+
+    console.log('Note findRecordsByUser - Debug:', {
+      rawFilters: JSON.stringify(rawFilters),
+      transformedFilters: JSON.stringify(filters),
+      userRole: user?.role?.name
+    });
 
     const userRole = user?.role?.name;
 
@@ -40,21 +72,13 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
         ],
       };
     } else if (userRole === 'Service Person') {
-      // Service Person can see notes for work orders they're assigned to
-      // OR notes for service records they created
+      // Service Person can see notes for service records they created
       userFilters = {
-        $or: [
-          {
-            work_order: {
-              users_permissions_user: user.id
-            }
-          },
-          {
-            service_record: {
-              users_permissions_user: user.id
-            }
+        service_record: {
+          users_permissions_user: {
+            id: user.id
           }
-        ]
+        }
       };
     }
     // Subscribers and Admins can see all notes (no additional filters)
@@ -84,10 +108,19 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
       },
     };
 
+    console.log('Note findRecordsByUser - queryOptions.where:', JSON.stringify(queryOptions.where, null, 2));
+
     // Execute the query
-    const result = await strapi.db
-      .query('api::note.note')
-      .findMany(queryOptions);
+    let result;
+    try {
+      result = await strapi.db
+        .query('api::note.note')
+        .findMany(queryOptions);
+    } catch (queryError) {
+      console.error('Note findRecordsByUser - Query Error:', queryError.message);
+      console.error('Note findRecordsByUser - Query Error Stack:', queryError.stack);
+      throw queryError;
+    }
 
     // Count total records for pagination meta
     const totalCount = await strapi.db
