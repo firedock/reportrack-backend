@@ -36,6 +36,11 @@
       "target": "api::work-order.work-order",
       "inversedBy": "notes"
     },
+    "service_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::service-record.service-record"
+    },
     "private": {
       "type": "boolean"
     },

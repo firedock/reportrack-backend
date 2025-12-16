@@ -112,7 +112,15 @@ module.exports = createCoreService(
 
     async sendCreationNotification(workOrder, creator) {
       const logs = [];
-      
+
+      // Check if email alerts are enabled (defaults to false if not set)
+      const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+      if (!emailAlertsEnabled) {
+        logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+        console.log('Work Order Creation Notification:', logs.join('\n'));
+        return logs;
+      }
+
       try {
         const { property, customer, title, id, status, dueBy } = workOrder;
         
@@ -268,7 +276,15 @@ module.exports = createCoreService(
 
     async sendChangeNotification(workOrder, changes) {
       const logs = [];
-      
+
+      // Check if email alerts are enabled (defaults to false if not set)
+      const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+      if (!emailAlertsEnabled) {
+        logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+        console.log('Work Order Change Notification:', logs.join('\n'));
+        return logs;
+      }
+
       try {
         const { property, customer, title, id } = workOrder;
         

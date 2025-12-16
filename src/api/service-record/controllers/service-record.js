@@ -110,7 +110,7 @@ module.exports = createCoreController(
     async reportIncident(ctx) {
       try {
         const { id } = ctx.params;
-        const { description, severity, category, location, mediaIds } = ctx.request.body;
+        const { description, severity, location, mediaIds } = ctx.request.body;
         const user = ctx.state.user;
 
         console.log('📝 reportIncident called for service record:', id);
@@ -153,7 +153,6 @@ module.exports = createCoreController(
           id: require('crypto').randomUUID(),
           description,
           severity: severity || 'medium',
-          category: category || 'other',
           reportedAt: new Date().toISOString(),
           reportedBy: { id: user.id, username: user.username, email: user.email },
           location: location || null,

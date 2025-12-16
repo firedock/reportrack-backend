@@ -695,6 +695,11 @@ export interface ApiNoteNote extends Schema.CollectionType {
       'oneToOne',
       'api::property.property'
     >;
+    service_record: Attribute.Relation<
+      'api::note.note',
+      'manyToOne',
+      'api::service-record.service-record'
+    >;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<'api::note.note', 'oneToOne', 'admin::user'> &
       Attribute.Private;

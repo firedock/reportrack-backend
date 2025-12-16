@@ -287,6 +287,18 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
   ) {
     const logs = [];
 
+    // Check if email alerts are enabled (defaults to false if not set)
+    const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+    if (!emailAlertsEnabled) {
+      logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+      // Still update notified timestamp so we don't keep trying
+      await strapi.db.query('api::alarm.alarm').update({
+        where: { id: alarm.id },
+        data: { notified: dayjs.utc().toISOString() },
+      });
+      return logs;
+    }
+
     try {
       const {
         property,

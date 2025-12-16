@@ -41,10 +41,20 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
       };
     } else if (userRole === 'Service Person') {
       // Service Person can see notes for work orders they're assigned to
+      // OR notes for service records they created
       userFilters = {
-        work_order: {
-          users_permissions_user: user.id
-        }
+        $or: [
+          {
+            work_order: {
+              users_permissions_user: user.id
+            }
+          },
+          {
+            service_record: {
+              users_permissions_user: user.id
+            }
+          }
+        ]
       };
     }
     // Subscribers and Admins can see all notes (no additional filters)
@@ -61,6 +71,9 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
         },
         work_order: {
           populate: ['property', 'customer'],
+        },
+        service_record: {
+          populate: ['users_permissions_user'],
         },
         createdByUser: true,
       },
@@ -96,7 +109,15 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
 
   async sendNoteNotification(note) {
     const logs = [];
-    
+
+    // Check if email alerts are enabled (defaults to false if not set)
+    const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+    if (!emailAlertsEnabled) {
+      logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+      console.log('Note Creation Notification:', logs.join('\n'));
+      return logs;
+    }
+
     try {
       // Get the full note with relations
       const fullNote = await strapi.db.query('api::note.note').findOne({
@@ -294,7 +315,15 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
 
   async sendPropertyNoteNotification(note) {
     const logs = [];
-    
+
+    // Check if email alerts are enabled (defaults to false if not set)
+    const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+    if (!emailAlertsEnabled) {
+      logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+      console.log('Property Note Creation Notification:', logs.join('\n'));
+      return logs;
+    }
+
     try {
       // Get the full note with relations
       const fullNote = await strapi.db.query('api::note.note').findOne({

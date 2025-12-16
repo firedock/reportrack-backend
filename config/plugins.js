@@ -45,8 +45,12 @@ module.exports = ({ env }) => ({
           params: {
             Bucket: env('AWS_BUCKET_NAME'),
           },
+          // Increase timeout for large file uploads
+          requestTimeout: 120000, // 2 minutes
         },
       },
+      // Increase size limits for photos
+      sizeLimit: 50 * 1024 * 1024, // 50MB
     },
   },
 });

@@ -106,6 +106,14 @@ module.exports = createCoreService(
     async sendIncidentNotification(serviceRecord, incident) {
       const logs = [];
 
+      // Check if email alerts are enabled (defaults to false if not set)
+      const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+      if (!emailAlertsEnabled) {
+        logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+        console.log('Incident Notification:', logs.join('\n'));
+        return logs;
+      }
+
       try {
         const { property, customer, service_type, id } = serviceRecord;
 
@@ -154,23 +162,12 @@ module.exports = createCoreService(
           critical: 'Critical'
         };
 
-        const categoryLabels = {
-          safety: 'Safety Hazard',
-          equipment: 'Equipment Issue',
-          property_damage: 'Property Damage',
-          access_issue: 'Access Issue',
-          pest: 'Pest Issue',
-          maintenance: 'Maintenance Required',
-          other: 'Other'
-        };
-
         const propertyName = property?.name || 'Unknown Property';
         const customerName = customer?.name || property?.customer?.name || 'Unknown Customer';
         const reporterName = incident.reportedBy?.username || 'Service Person';
         const serviceTypeName = service_type?.service || 'Service';
         const severityColor = severityColors[incident.severity] || '#faad14';
         const severityLabel = severityLabels[incident.severity] || 'Medium';
-        const categoryLabel = categoryLabels[incident.category] || incident.category || 'Other';
         const reportedTime = dayjs(incident.reportedAt).format('MM/DD/YYYY h:mmA');
 
         const emailContent = {
@@ -186,7 +183,6 @@ module.exports = createCoreService(
                 <p><strong>Customer:</strong> ${customerName}</p>
                 <p><strong>Service Type:</strong> ${serviceTypeName}</p>
                 <p><strong>Reported By:</strong> ${reporterName}</p>
-                <p><strong>Category:</strong> ${categoryLabel}</p>
                 <p><strong>Time:</strong> ${reportedTime}</p>
 
                 <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${severityColor};">
@@ -205,7 +201,7 @@ module.exports = createCoreService(
               </div>
 
               <p style="margin-top: 20px; color: #666; font-size: 12px;">
-                This is an automated notification from Reportrack.
+                This is an automated notification from REPORTRACK.
               </p>
             </div>
           `,
@@ -250,7 +246,6 @@ module.exports = createCoreService(
                 serviceRecordId: id,
                 incidentId: incident.id,
                 severity: incident.severity,
-                category: incident.category,
                 propertyName,
                 reporterName,
                 username: user.username || user.name || 'Unknown',
@@ -273,7 +268,6 @@ module.exports = createCoreService(
                 serviceRecordId: id,
                 incidentId: incident.id,
                 severity: incident.severity,
-                category: incident.category,
                 propertyName,
                 reporterName,
                 username: user.username || user.name || 'Unknown',
