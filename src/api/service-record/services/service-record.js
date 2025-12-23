@@ -8,7 +8,11 @@ module.exports = createCoreService(
   'api::service-record.service-record',
   ({ strapi }) => ({
     async findRecordsByUser(user, queryParams) {
-      // console.log('findRecordsByUser', user);
+      console.log('🔍 findRecordsByUser called:', {
+        userId: user?.id,
+        userRole: user?.role?.name,
+        queryParams: JSON.stringify(queryParams)
+      });
       const page = queryParams?.pagination?.page || 1;
       const pageSize = queryParams?.pagination?.pageSize || 10;
       const sort = queryParams?.sort || 'startDateTime:desc';
@@ -78,7 +82,7 @@ module.exports = createCoreService(
         },
       };
 
-      // console.log('\nqueryOptions', JSON.stringify(queryOptions, 2, null));
+      console.log('🔍 queryOptions:', JSON.stringify(queryOptions, null, 2));
 
       // Execute the query
       const result = await strapi.db
@@ -89,6 +93,8 @@ module.exports = createCoreService(
       const totalCount = await strapi.db
         .query('api::service-record.service-record')
         .count({ where: { ...userFilters, ...filters } });
+
+      console.log('🔍 Query result:', { resultCount: result?.length, totalCount });
 
       return {
         data: result,

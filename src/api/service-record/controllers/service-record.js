@@ -129,6 +129,12 @@ module.exports = createCoreController(
           return ctx.badRequest('Description is required');
         }
 
+        // Validate photo requirement - at least one photo is required
+        if (!mediaIds || !Array.isArray(mediaIds) || mediaIds.length === 0) {
+          console.error('❌ No photos provided');
+          return ctx.badRequest('At least one photo is required for incident reports');
+        }
+
         // Get current service record with deep population for notifications
         console.log('📝 Fetching service record...');
         const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
