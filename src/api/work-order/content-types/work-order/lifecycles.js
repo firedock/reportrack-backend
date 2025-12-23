@@ -12,25 +12,11 @@ module.exports = {
       userId: user?.id,
       userName: user?.username,
       userEmail: user?.email,
-      dataCreatedBy: data.createdBy
     });
 
-    // Set the createdBy field to the current user
-    if (user && user.id && !data.createdBy) {
-      // Verify user exists in database before setting
-      const userExists = await strapi.db.query('plugin::users-permissions.user').findOne({
-        where: { id: user.id }
-      });
-
-      if (userExists) {
-        data.createdBy = user.id;
-        console.log(`Setting createdBy to user ${user.id} (${user.username})`);
-      } else {
-        console.error(`User ${user.id} not found in database, not setting createdBy`);
-      }
-    } else if (!data.createdBy) {
-      console.warn('No user context available and no createdBy provided');
-    }
+    // Note: We don't set data.createdBy here because Strapi's built-in createdBy
+    // references admin_users, not regular up_users. The work-order schema would
+    // need a custom 'author' or 'created_by_user' relation to track the creating user.
 
     // If created by a customer and no status provided, set to "New"
     if (user?.role?.name === 'Customer' && !data.status) {

@@ -144,28 +144,13 @@ module.exports = createCoreController(
     async delete(ctx) {
       const user = ctx.state.user;
       const userRole = user?.role?.name;
-      const workOrderId = ctx.params.id;
 
-      // Check if user has permission to delete
-      if (userRole !== 'Admin' && userRole !== 'Subscriber' && userRole !== 'Customer') {
+      // Only Admin and Subscriber can delete work orders
+      // Note: Customer deletion was removed because the work-order schema doesn't have
+      // a proper 'author' relation to track which user created it. To re-enable this,
+      // add an 'author' relation (oneToOne to users-permissions.user) to the schema.
+      if (userRole !== 'Admin' && userRole !== 'Subscriber') {
         return ctx.forbidden('You do not have permission to delete work orders');
-      }
-
-      // If customer, check if they created the work order
-      if (userRole === 'Customer') {
-        const workOrder = await strapi.db.query('api::work-order.work-order').findOne({
-          where: { id: workOrderId },
-          populate: ['createdBy']
-        });
-
-        if (!workOrder) {
-          return ctx.notFound('Work order not found');
-        }
-
-        // Check if the customer created this work order
-        if (workOrder.createdBy?.id !== user.id) {
-          return ctx.forbidden('Customers can only delete work orders they created');
-        }
       }
 
       // Use default delete behavior for authorized users
