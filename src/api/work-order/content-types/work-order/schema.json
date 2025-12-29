@@ -58,6 +58,11 @@
       "multiple": true,
       "required": false,
       "allowedTypes": ["images", "files", "videos"]
+    },
+    "author": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
     }
   }
 }

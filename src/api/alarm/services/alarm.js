@@ -71,6 +71,14 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           continue;
         }
 
+        // Skip if property is null (data integrity issue)
+        if (!property || !property.id) {
+          logs.push(
+            `- Skipping alarm ID ${id}: Property is null or missing. Please update this alarm with a valid property.`
+          );
+          continue;
+        }
+
         // Skip alarm if it's not scheduled for the current day
         if (!daysOfWeek.includes(currentDay)) {
           logs.push(

@@ -14,9 +14,11 @@ module.exports = {
       userEmail: user?.email,
     });
 
-    // Note: We don't set data.createdBy here because Strapi's built-in createdBy
-    // references admin_users, not regular up_users. The work-order schema would
-    // need a custom 'author' or 'created_by_user' relation to track the creating user.
+    // Set the author field to the current user (references up_users, not admin_users)
+    if (user && user.id && !data.author) {
+      data.author = user.id;
+      console.log(`Setting work order author to user ${user.id} (${user.username})`);
+    }
 
     // If created by a customer and no status provided, set to "New"
     if (user?.role?.name === 'Customer' && !data.status) {
