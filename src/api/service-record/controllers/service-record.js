@@ -194,5 +194,72 @@ module.exports = createCoreController(
         return ctx.internalServerError(`Failed to report incident: ${error.message}`);
       }
     },
+
+    /**
+     * Update subscriber notes on a specific incident
+     * Only Subscribers and Admins can add notes
+     */
+    async updateIncidentNotes(ctx) {
+      try {
+        const { id, incidentId } = ctx.params;
+        const { subscriberNotes } = ctx.request.body;
+        const user = ctx.state.user;
+
+        if (!user) {
+          return ctx.unauthorized('You must be logged in');
+        }
+
+        // Check if user has Subscriber or Admin role
+        const userRole = user.role?.name;
+        if (!['Subscriber', 'Admin'].includes(userRole)) {
+          return ctx.forbidden('Only Subscribers can add notes to incidents');
+        }
+
+        const result = await strapi.service('api::service-record.service-record')
+          .updateIncidentNotes(id, incidentId, subscriberNotes, user);
+
+        if (!result.success) {
+          return ctx.badRequest(result.error);
+        }
+
+        return { data: result };
+      } catch (error) {
+        console.error('updateIncidentNotes error:', error);
+        return ctx.internalServerError(`Failed to update notes: ${error.message}`);
+      }
+    },
+
+    /**
+     * Send incident report to Client (Customer) users
+     * Only Subscribers and Admins can trigger this action
+     */
+    async sendIncidentToClient(ctx) {
+      try {
+        const { id, incidentId } = ctx.params;
+        const user = ctx.state.user;
+
+        if (!user) {
+          return ctx.unauthorized('You must be logged in');
+        }
+
+        // Check if user has Subscriber or Admin role
+        const userRole = user.role?.name;
+        if (!['Subscriber', 'Admin'].includes(userRole)) {
+          return ctx.forbidden('Only Subscribers can send incidents to clients');
+        }
+
+        const result = await strapi.service('api::service-record.service-record')
+          .sendIncidentToClient(id, incidentId, user);
+
+        if (!result.success) {
+          return ctx.badRequest(result.error);
+        }
+
+        return { data: result };
+      } catch (error) {
+        console.error('sendIncidentToClient error:', error);
+        return ctx.internalServerError(`Failed to send to client: ${error.message}`);
+      }
+    },
   })
 );

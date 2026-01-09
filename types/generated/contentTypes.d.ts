@@ -907,6 +907,11 @@ export interface ApiWorkOrderWorkOrder extends Schema.CollectionType {
       'oneToOne',
       'api::account.account'
     >;
+    author: Attribute.Relation<
+      'api::work-order.work-order',
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
     createdAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
       'api::work-order.work-order',

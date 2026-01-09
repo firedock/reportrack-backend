@@ -25,6 +25,20 @@ module.exports = {
         // policies: ['global::isOwner'],
       },
     },
+    // Update subscriber notes on an incident (Subscriber/Admin only)
+    {
+      method: 'PUT',
+      path: '/service-records/:id/incidents/:incidentId/notes',
+      handler: 'service-record.updateIncidentNotes',
+      config: {},
+    },
+    // Send incident to client - manual trigger (Subscriber/Admin only)
+    {
+      method: 'POST',
+      path: '/service-records/:id/incidents/:incidentId/send-to-client',
+      handler: 'service-record.sendIncidentToClient',
+      config: {},
+    },
     {
       method: 'GET',
       path: '/service-records/:id',
