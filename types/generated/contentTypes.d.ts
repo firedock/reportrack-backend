@@ -613,6 +613,8 @@ export interface ApiEmailLogEmailLog extends Schema.CollectionType {
         'work_order_creation',
         'work_order_update',
         'service_record',
+        'incident_notification',
+        'incident_to_client',
         'manual',
         'other'
       ]

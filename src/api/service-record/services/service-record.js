@@ -553,13 +553,19 @@ module.exports = createCoreService(
           }
         }
 
+        // Collect list of emails that were successfully sent to
+        const sentToEmails = optedInUsers
+          .filter(u => u.email)
+          .map(u => u.email);
+
         // Update incident to mark as sent to client
         const now = new Date().toISOString();
         incidents[incidentIndex] = {
           ...incident,
           sentToClient: true,
           sentToClientAt: now,
-          sentToClientBy: { id: user.id, username: user.username }
+          sentToClientBy: { id: user.id, username: user.username },
+          sentToEmails: sentToEmails
         };
 
         await strapi.db.query('api::service-record.service-record').update({
