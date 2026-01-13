@@ -149,35 +149,18 @@ module.exports = createCoreService(
           return logs;
         }
 
-        // Severity colors for email styling
-        const severityColors = {
-          low: '#52c41a',
-          medium: '#faad14',
-          high: '#fa8c16',
-          critical: '#ff4d4f'
-        };
-
-        const severityLabels = {
-          low: 'Low',
-          medium: 'Medium',
-          high: 'High',
-          critical: 'Critical'
-        };
-
         const propertyName = property?.name || 'Unknown Property';
         const customerName = customer?.name || property?.customer?.name || 'Unknown Customer';
         const reporterName = incident.reportedBy?.username || 'Service Person';
         const serviceTypeName = service_type?.service || 'Service';
-        const severityColor = severityColors[incident.severity] || '#faad14';
-        const severityLabel = severityLabels[incident.severity] || 'Medium';
         const reportedTime = dayjs(incident.reportedAt).format('MM/DD/YYYY h:mmA');
 
         const emailContent = {
-          subject: `[INCIDENT - ${severityLabel.toUpperCase()}] Issue Reported at ${propertyName}`,
+          subject: `[INCIDENT REPORT] Issue Reported at ${propertyName}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: ${severityColor}; color: white; padding: 15px; border-radius: 5px 5px 0 0;">
-                <h2 style="margin: 0;">Incident Report - ${severityLabel}</h2>
+              <div style="background-color: #faad14; color: white; padding: 15px; border-radius: 5px 5px 0 0;">
+                <h2 style="margin: 0;">Incident Report</h2>
               </div>
 
               <div style="background-color: #f5f5f5; padding: 20px; border-radius: 0 0 5px 5px;">
@@ -187,7 +170,7 @@ module.exports = createCoreService(
                 <p><strong>Reported By:</strong> ${reporterName}</p>
                 <p><strong>Time:</strong> ${reportedTime}</p>
 
-                <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${severityColor};">
+                <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #faad14;">
                   <h4 style="margin-top: 0;">Description:</h4>
                   <p style="white-space: pre-wrap;">${incident.description}</p>
                 </div>
@@ -247,7 +230,6 @@ module.exports = createCoreService(
               triggerDetails: {
                 serviceRecordId: id,
                 incidentId: incident.id,
-                severity: incident.severity,
                 propertyName,
                 reporterName,
                 username: user.username || user.name || 'Unknown',
@@ -269,7 +251,6 @@ module.exports = createCoreService(
               triggerDetails: {
                 serviceRecordId: id,
                 incidentId: incident.id,
-                severity: incident.severity,
                 propertyName,
                 reporterName,
                 username: user.username || user.name || 'Unknown',
@@ -436,21 +417,13 @@ module.exports = createCoreService(
         const customerName = customer?.name || property?.customer?.name || 'Unknown Customer';
         const serviceTypeName = service_type?.service || 'Service';
         const reportedTime = dayjs(incident.reportedAt).format('MM/DD/YYYY h:mmA');
-        const severityColors = {
-          low: '#52c41a', medium: '#faad14', high: '#fa8c16', critical: '#ff4d4f'
-        };
-        const severityColor = severityColors[incident.severity] || '#faad14';
-        const severityLabels = {
-          low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical'
-        };
-        const severityLabel = severityLabels[incident.severity] || 'Medium';
 
         const emailContent = {
-          subject: `[INCIDENT REPORT - ${severityLabel.toUpperCase()}] ${propertyName}`,
+          subject: `[INCIDENT REPORT] ${propertyName}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: ${severityColor}; color: white; padding: 15px; border-radius: 5px 5px 0 0;">
-                <h2 style="margin: 0;">Incident Report - ${severityLabel}</h2>
+              <div style="background-color: #faad14; color: white; padding: 15px; border-radius: 5px 5px 0 0;">
+                <h2 style="margin: 0;">Incident Report</h2>
               </div>
 
               <div style="background-color: #f5f5f5; padding: 20px; border-radius: 0 0 5px 5px;">
@@ -460,7 +433,7 @@ module.exports = createCoreService(
                 <p><strong>Reported:</strong> ${reportedTime}</p>
                 <p><strong>Reported By:</strong> ${incident.reportedBy?.username || 'Service Person'}</p>
 
-                <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${severityColor};">
+                <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #faad14;">
                   <h4 style="margin-top: 0;">Description:</h4>
                   <p style="white-space: pre-wrap;">${incident.description}</p>
                 </div>
@@ -520,7 +493,6 @@ module.exports = createCoreService(
               triggerDetails: {
                 serviceRecordId,
                 incidentId,
-                severity: incident.severity,
                 propertyName,
                 sentBy: user?.username,
               },
@@ -541,7 +513,6 @@ module.exports = createCoreService(
               triggerDetails: {
                 serviceRecordId,
                 incidentId,
-                severity: incident.severity,
                 propertyName,
                 sentBy: user?.username,
               },
