@@ -86,7 +86,20 @@ module.exports = createCoreController(
     async findOne(ctx) {
       const { id } = ctx.params;
       const user = ctx.state.user;
-      const userRole = user?.role?.name;
+
+      // Ensure we have the user's role - fetch it if not populated
+      let userRole = user?.role?.name;
+      if (user?.id && !userRole) {
+        try {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        } catch (err) {
+          console.error('Error fetching user role in findOne:', err);
+        }
+      }
 
       const entity = await strapi.entityService.findOne(
         'api::service-record.service-record',

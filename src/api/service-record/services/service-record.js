@@ -8,114 +8,126 @@ module.exports = createCoreService(
   'api::service-record.service-record',
   ({ strapi }) => ({
     async findRecordsByUser(user, queryParams) {
-      console.log('🔍 findRecordsByUser called:', {
-        userId: user?.id,
-        userRole: user?.role?.name,
-        queryParams: JSON.stringify(queryParams)
-      });
-      const page = queryParams?.pagination?.page || 1;
-      const pageSize = queryParams?.pagination?.pageSize || 10;
-      const sort = queryParams?.sort || 'startDateTime:desc';
-      const filters = queryParams?.filters || {};
-      const doAssociatedFilter =
-        queryParams?.showAssociatedOnly === 'true' && user?.id;
+      try {
+        // Ensure we have the user's role - fetch it if not populated
+        let userRole = user?.role?.name;
+        if (user?.id && !userRole) {
+          try {
+            const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+              where: { id: user.id },
+              populate: ['role']
+            });
+            userRole = fullUser?.role?.name;
+          } catch (err) {
+            console.error('Error fetching user role:', err);
+          }
+        }
 
-      const userRole = user?.role?.name;
+        console.log('🔍 findRecordsByUser called:', {
+          userId: user?.id,
+          userRole: userRole,
+          queryParams: JSON.stringify(queryParams)
+        });
+        const page = queryParams?.pagination?.page || 1;
+        const pageSize = queryParams?.pagination?.pageSize || 10;
+        const sort = queryParams?.sort || 'startDateTime:desc';
+        const filters = queryParams?.filters || {};
+        const doAssociatedFilter =
+          queryParams?.showAssociatedOnly === 'true' && user?.id;
 
-      let userFilters = {};
+        let userFilters = {};
 
-      if (userRole === 'Customer') {
-        userFilters = {
-          property: {
-            users: {
-              id: { $eq: user.id },
+        if (userRole === 'Customer') {
+          userFilters = {
+            property: {
+              users: {
+                id: { $eq: user.id },
+              },
+            },
+          };
+        } else if (userRole === 'Service Person') {
+          userFilters = { users_permissions_user: user.id };
+        } else if (doAssociatedFilter) {
+          // Determine if we need to filter by associated users
+          userFilters = {
+            $or: [
+              {
+                property: {
+                  users: {
+                    id: { $eq: user.id },
+                  },
+                },
+              },
+              {
+                customer: {
+                  users: {
+                    id: { $eq: user.id },
+                  },
+                },
+              },
+            ],
+          };
+        }
+
+        // Set up query options with pagination, sorting, and user filters
+        const queryOptions = {
+          where: { ...userFilters, ...filters },
+          populate: {
+            property: {
+              populate: ['users'],
+            },
+            customer: {
+              populate: ['users'],
+            },
+            service_type: true,
+            users_permissions_user: true,
+            author: true,
+          },
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          orderBy: {
+            startDateTime: sort.split(':')[1] === 'asc' ? 'asc' : 'desc',
+          },
+        };
+
+        console.log('🔍 queryOptions:', JSON.stringify(queryOptions, null, 2));
+
+        // Execute the query
+        const result = await strapi.db
+          .query('api::service-record.service-record')
+          .findMany(queryOptions);
+
+        // Count total records for pagination meta
+        const totalCount = await strapi.db
+          .query('api::service-record.service-record')
+          .count({ where: { ...userFilters, ...filters } });
+
+        console.log('🔍 Query result:', { resultCount: result?.length, totalCount });
+
+        // Filter incidents for Customer users - only show approved/sent incidents
+        let filteredResult = result || [];
+        if (userRole === 'Customer' && Array.isArray(filteredResult)) {
+          filteredResult = filteredResult.map(record => ({
+            ...record,
+            incidents: (record.incidents || []).filter(incident => incident.sentToClient === true)
+          }));
+        }
+
+        return {
+          data: filteredResult,
+          meta: {
+            pagination: {
+              page,
+              pageSize,
+              pageCount: Math.ceil(totalCount / pageSize),
+              total: totalCount,
             },
           },
         };
-        // console.log('Customer Filters', userFilters);
-      } else if (userRole === 'Service Person') {
-        userFilters = { users_permissions_user: user.id };
-        // console.log('Service Person Filters', userFilters);
+      } catch (error) {
+        console.error('❌ findRecordsByUser error:', error);
+        throw error;
       }
-
-      // Determine if we need to filter by associated users
-      else if (doAssociatedFilter) {
-        userFilters = {
-          $or: [
-            {
-              property: {
-                users: {
-                  id: { $eq: user.id },
-                },
-              },
-            },
-            {
-              customer: {
-                users: {
-                  id: { $eq: user.id },
-                },
-              },
-            },
-          ],
-        };
-        // console.log('Show Associated', doAssociatedFilter);
-      }
-
-      // Set up query options with pagination, sorting, and user filters
-      const queryOptions = {
-        where: { ...userFilters, ...filters },
-        populate: {
-          property: {
-            populate: ['users'],
-          },
-          customer: {
-            populate: ['users'],
-          },
-          service_type: true,
-          users_permissions_user: true,
-          author: true,
-        },
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-        orderBy: {
-          startDateTime: sort.split(':')[1] === 'asc' ? 'asc' : 'desc',
-        },
-      };
-
-      console.log('🔍 queryOptions:', JSON.stringify(queryOptions, null, 2));
-
-      // Execute the query
-      const result = await strapi.db
-        .query('api::service-record.service-record')
-        .findMany(queryOptions);
-
-      // Count total records for pagination meta
-      const totalCount = await strapi.db
-        .query('api::service-record.service-record')
-        .count({ where: { ...userFilters, ...filters } });
-
-      console.log('🔍 Query result:', { resultCount: result?.length, totalCount });
-
-      // Filter incidents for Customer users - only show approved/sent incidents
-      let filteredResult = result;
-      if (userRole === 'Customer') {
-        filteredResult = result.map(record => ({
-          ...record,
-          incidents: (record.incidents || []).filter(incident => incident.sentToClient === true)
-        }));
-      }
-
-      return {
-        data: filteredResult,
-        meta: {
-          pagination: {
-            page,
-            pageSize,
-            pageCount: Math.ceil(totalCount / pageSize),
-            total: totalCount,
-          },
-        },
-      };
     },
 
     async sendIncidentNotification(serviceRecord, incident) {
