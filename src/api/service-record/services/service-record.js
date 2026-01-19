@@ -96,8 +96,17 @@ module.exports = createCoreService(
 
       console.log('🔍 Query result:', { resultCount: result?.length, totalCount });
 
+      // Filter incidents for Customer users - only show approved/sent incidents
+      let filteredResult = result;
+      if (userRole === 'Customer') {
+        filteredResult = result.map(record => ({
+          ...record,
+          incidents: (record.incidents || []).filter(incident => incident.sentToClient === true)
+        }));
+      }
+
       return {
-        data: result,
+        data: filteredResult,
         meta: {
           pagination: {
             page,

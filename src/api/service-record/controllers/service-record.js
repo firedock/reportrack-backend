@@ -82,9 +82,11 @@ module.exports = createCoreController(
       return updatedResponse;
     },
 
-    // Override findOne to always populate media
+    // Override findOne to always populate media and filter incidents for Customers
     async findOne(ctx) {
       const { id } = ctx.params;
+      const user = ctx.state.user;
+      const userRole = user?.role?.name;
 
       const entity = await strapi.entityService.findOne(
         'api::service-record.service-record',
@@ -102,6 +104,11 @@ module.exports = createCoreController(
           },
         }
       );
+
+      // Filter incidents for Customer users - only show approved/sent incidents
+      if (entity && userRole === 'Customer' && entity.incidents) {
+        entity.incidents = entity.incidents.filter(incident => incident.sentToClient === true);
+      }
 
       const sanitizedEntity = await this.sanitizeOutput(entity, ctx);
       return this.transformResponse(sanitizedEntity);
