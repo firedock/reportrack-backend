@@ -93,6 +93,7 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
 
       if (userRole === 'Customer') {
         // Customer can see notes for properties they have access to
+        // This includes notes linked directly to properties, via work orders, or via service records
         userFilters = {
           $or: [
             {
@@ -104,6 +105,15 @@ module.exports = createCoreService('api::note.note', ({ strapi }) => ({
             },
             {
               work_order: {
+                property: {
+                  users: {
+                    id: { $eq: user.id },
+                  },
+                },
+              },
+            },
+            {
+              service_record: {
                 property: {
                   users: {
                     id: { $eq: user.id },

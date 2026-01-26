@@ -580,5 +580,90 @@ module.exports = createCoreService(
         return { success: false, error: error.message, logs };
       }
     },
+
+    /**
+     * Add a customer reply to an incident
+     * Only Customer users can submit replies on incidents that have been sent to them
+     * @param {number} serviceRecordId - The service record ID
+     * @param {string} incidentId - The incident UUID
+     * @param {string} replyText - The reply text
+     * @param {object} user - The customer user making the reply
+     */
+    async addCustomerReply(serviceRecordId, incidentId, replyText, user) {
+      const logs = [];
+
+      try {
+        // Verify the incident exists and was sent to client
+        const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
+          where: { id: serviceRecordId },
+          populate: {
+            property: { populate: { users: true } },
+            customer: { populate: { users: true } },
+          }
+        });
+
+        if (!serviceRecord) {
+          throw new Error('Service record not found');
+        }
+
+        const incidents = serviceRecord.incidents || [];
+        const incidentIndex = incidents.findIndex(inc => inc.id === incidentId);
+
+        if (incidentIndex === -1) {
+          throw new Error('Incident not found');
+        }
+
+        const incident = incidents[incidentIndex];
+
+        // Verify incident was sent to client
+        if (!incident.sentToClient) {
+          throw new Error('This incident has not been shared with you yet');
+        }
+
+        // Verify user has access to this property or customer
+        const propertyUserIds = (serviceRecord.property?.users || []).map(u => u.id);
+        const customerUserIds = (serviceRecord.customer?.users || []).map(u => u.id);
+        const hasAccess = propertyUserIds.includes(user.id) || customerUserIds.includes(user.id);
+
+        if (!hasAccess) {
+          throw new Error('You do not have access to reply to this incident');
+        }
+
+        // Create reply object
+        const reply = {
+          id: require('crypto').randomUUID(),
+          text: replyText,
+          createdAt: new Date().toISOString(),
+          createdBy: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.name
+          }
+        };
+
+        // Add reply to incident's customerReplies array
+        const existingReplies = incident.customerReplies || [];
+        incidents[incidentIndex] = {
+          ...incident,
+          customerReplies: [...existingReplies, reply]
+        };
+
+        // Update service record
+        await strapi.db.query('api::service-record.service-record').update({
+          where: { id: serviceRecordId },
+          data: { incidents }
+        });
+
+        logs.push(`✅ Customer reply added by ${user.username} (${user.name || 'no name'})`);
+        console.log('Customer Reply:', logs.join('\n'));
+
+        return { success: true, reply, logs };
+      } catch (error) {
+        logs.push(`❌ Error: ${error.message}`);
+        console.error('Customer reply error:', error);
+        return { success: false, error: error.message, logs };
+      }
+    },
   })
 );

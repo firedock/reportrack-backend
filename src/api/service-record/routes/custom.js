@@ -39,6 +39,13 @@ module.exports = {
       handler: 'service-record.sendIncidentToClient',
       config: {},
     },
+    // Customer submits reply to incident (Customer only)
+    {
+      method: 'POST',
+      path: '/service-records/:id/incidents/:incidentId/customer-reply',
+      handler: 'service-record.addCustomerReply',
+      config: {},
+    },
     {
       method: 'GET',
       path: '/service-records/:id',

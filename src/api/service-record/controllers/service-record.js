@@ -180,7 +180,7 @@ module.exports = createCoreController(
           description,
           severity: severity || 'medium',
           reportedAt: new Date().toISOString(),
-          reportedBy: { id: user.id, username: user.username, email: user.email },
+          reportedBy: { id: user.id, username: user.username, email: user.email, name: user.name },
           location: location || null,
           mediaIds: mediaIds || [],
           notificationSent: false
@@ -279,6 +279,57 @@ module.exports = createCoreController(
       } catch (error) {
         console.error('sendIncidentToClient error:', error);
         return ctx.internalServerError(`Failed to send to client: ${error.message}`);
+      }
+    },
+
+    /**
+     * Customer submits a reply to an incident
+     * Only Customers can use this endpoint on incidents that were sent to them
+     */
+    async addCustomerReply(ctx) {
+      try {
+        const { id, incidentId } = ctx.params;
+        const { replyText } = ctx.request.body;
+        const user = ctx.state.user;
+
+        if (!user) {
+          return ctx.unauthorized('You must be logged in');
+        }
+
+        // Verify user is a Customer
+        let userRole = user.role?.name;
+        if (!userRole && user.id) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
+        if (userRole !== 'Customer') {
+          return ctx.forbidden('Only customers can submit replies through this endpoint');
+        }
+
+        // Validate reply text
+        if (!replyText || typeof replyText !== 'string' || !replyText.trim()) {
+          return ctx.badRequest('Reply text is required');
+        }
+
+        if (replyText.length > 2000) {
+          return ctx.badRequest('Reply text cannot exceed 2000 characters');
+        }
+
+        const result = await strapi.service('api::service-record.service-record')
+          .addCustomerReply(id, incidentId, replyText.trim(), user);
+
+        if (!result.success) {
+          return ctx.badRequest(result.error);
+        }
+
+        return { data: result };
+      } catch (error) {
+        console.error('addCustomerReply error:', error);
+        return ctx.internalServerError(`Failed to submit reply: ${error.message}`);
       }
     },
   })
