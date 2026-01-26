@@ -61,25 +61,80 @@ module.exports = createCoreController(
       return ctx.send(records); // Return the filtered records
     },
     async create(ctx) {
-      const { id } = ctx.state.user; // Get the current user ID
-      const response = await super.create(ctx); // Create the record
-      const updatedResponse = await strapi.entityService.update(
-        'api::service-record.service-record',
-        response.data.id,
-        { data: { author: id } } // Set the author field
-      );
-      return updatedResponse;
+      try {
+        const user = ctx.state.user;
+
+        if (!user) {
+          return ctx.unauthorized('You must be logged in to create a service record');
+        }
+
+        const { id } = user; // Get the current user ID
+
+        console.log('📝 Creating service record for user:', id, user.username);
+        console.log('📝 Request body:', JSON.stringify(ctx.request.body));
+
+        const response = await super.create(ctx); // Create the record
+
+        if (!response?.data?.id) {
+          console.error('❌ Service record creation returned no ID');
+          return ctx.internalServerError('Failed to create service record - no ID returned');
+        }
+
+        console.log('✅ Service record created:', response.data.id);
+
+        const updatedResponse = await strapi.entityService.update(
+          'api::service-record.service-record',
+          response.data.id,
+          { data: { author: id } } // Set the author field
+        );
+
+        return updatedResponse;
+      } catch (error) {
+        console.error('❌ Service record create error:', error);
+        console.error('❌ Error stack:', error.stack);
+
+        // Check if it's a validation error (like active service record exists)
+        if (error.name === 'ValidationError' || error.details?.code === 'ACTIVE_SERVICE_RECORD_EXISTS') {
+          return ctx.badRequest(error.message, error.details);
+        }
+
+        // Return a more descriptive error
+        return ctx.internalServerError(`Failed to create service record: ${error.message}`);
+      }
     },
 
     async update(ctx) {
-      const { id } = ctx.state.user; // Get the current user ID
-      const response = await super.update(ctx); // Update the record
-      const updatedResponse = await strapi.entityService.update(
-        'api::service-record.service-record',
-        response.data.id,
-        { data: { editor: id } } // Set the editor field to current user
-      );
-      return updatedResponse;
+      try {
+        const user = ctx.state.user;
+
+        if (!user) {
+          return ctx.unauthorized('You must be logged in to update a service record');
+        }
+
+        const { id } = user; // Get the current user ID
+        const recordId = ctx.params.id;
+
+        console.log('📝 Updating service record:', recordId, 'by user:', id);
+
+        const response = await super.update(ctx); // Update the record
+
+        if (!response?.data?.id) {
+          console.error('❌ Service record update returned no data');
+          return ctx.internalServerError('Failed to update service record');
+        }
+
+        const updatedResponse = await strapi.entityService.update(
+          'api::service-record.service-record',
+          response.data.id,
+          { data: { editor: id } } // Set the editor field to current user
+        );
+
+        return updatedResponse;
+      } catch (error) {
+        console.error('❌ Service record update error:', error);
+        console.error('❌ Error stack:', error.stack);
+        return ctx.internalServerError(`Failed to update service record: ${error.message}`);
+      }
     },
 
     // Override findOne to always populate media and filter incidents for Customers
