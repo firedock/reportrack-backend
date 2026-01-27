@@ -14,7 +14,9 @@
     "test:coverage": "jest --coverage",
     "logs:dev": "aws logs tail /aws/elasticbeanstalk/reportrack-backend-dev/var/log/web.stdout.log --region us-west-1 --follow --since 2m",
     "logs:staging": "aws logs tail /aws/elasticbeanstalk/reportrack-backend-staging/var/log/web.stdout.log --region us-west-1 --follow --since 2m",
-    "logs:prod": "aws logs tail /aws/elasticbeanstalk/reportrack-backend-prod/var/log/web.stdout.log --region us-west-1 --follow --since 2m"
+    "logs:prod": "aws logs tail /aws/elasticbeanstalk/reportrack-backend-prod/var/log/web.stdout.log --region us-west-1 --follow --since 2m",
+    "restart:staging": "aws elasticbeanstalk restart-app-server --environment-name reportrack-backend-staging --region us-west-1",
+    "restart:prod": "aws elasticbeanstalk restart-app-server --environment-name reportrack-backend-prod --region us-west-1"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "4.20.1",
