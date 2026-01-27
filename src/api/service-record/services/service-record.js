@@ -582,13 +582,14 @@ module.exports = createCoreService(
     },
 
     /**
-     * Add a reply to an incident
-     * Only Subscribers/Admins can add replies to respond to customer-reported incidents
+     * Add a reply to an incident (two-way communication)
+     * Customers can reply to incidents sent to them
+     * Subscribers/Admins can reply to any incident
      * @param {number} serviceRecordId - The service record ID
      * @param {string} incidentId - The incident UUID
      * @param {string} replyText - The reply text
-     * @param {object} user - The user making the reply (Subscriber or Admin)
-     * @param {string} userRole - The user's role (Subscriber, Admin)
+     * @param {object} user - The user making the reply
+     * @param {string} userRole - The user's role (Customer, Subscriber, Admin)
      */
     async addIncidentReply(serviceRecordId, incidentId, replyText, user, userRole) {
       const logs = [];
@@ -597,6 +598,10 @@ module.exports = createCoreService(
         // Verify the incident exists
         const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
           where: { id: serviceRecordId },
+          populate: {
+            property: { populate: { users: true } },
+            customer: { populate: { users: true } },
+          }
         });
 
         if (!serviceRecord) {
@@ -611,6 +616,23 @@ module.exports = createCoreService(
         }
 
         const incident = incidents[incidentIndex];
+
+        // For Customers: verify incident was sent to client and they have access
+        if (userRole === 'Customer') {
+          if (!incident.sentToClient) {
+            throw new Error('This incident has not been shared with you yet');
+          }
+
+          // Verify user has access to this property or customer
+          const propertyUserIds = (serviceRecord.property?.users || []).map(u => u.id);
+          const customerUserIds = (serviceRecord.customer?.users || []).map(u => u.id);
+          const hasAccess = propertyUserIds.includes(user.id) || customerUserIds.includes(user.id);
+
+          if (!hasAccess) {
+            throw new Error('You do not have access to reply to this incident');
+          }
+        }
+        // Subscribers/Admins can reply to any incident (no additional checks needed)
 
         // Create reply object with role indicator
         const reply = {

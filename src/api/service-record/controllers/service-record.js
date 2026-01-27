@@ -338,8 +338,9 @@ module.exports = createCoreController(
     },
 
     /**
-     * Add a reply to an incident
-     * Only Subscribers and Admins can add replies to respond to customer incidents
+     * Add a reply to an incident (two-way communication)
+     * Customers, Subscribers, and Admins can add replies
+     * Customers can only reply to incidents that were sent to them
      */
     async addCustomerReply(ctx) {
       try {
@@ -361,9 +362,9 @@ module.exports = createCoreController(
           userRole = fullUser?.role?.name;
         }
 
-        // Only allow Subscriber and Admin roles to add replies
-        if (!['Subscriber', 'Admin'].includes(userRole)) {
-          return ctx.forbidden('Only Subscribers can add replies to incidents');
+        // Allow Customer, Subscriber, and Admin roles to add replies
+        if (!['Customer', 'Subscriber', 'Admin'].includes(userRole)) {
+          return ctx.forbidden('You do not have permission to add replies');
         }
 
         // Validate reply text
