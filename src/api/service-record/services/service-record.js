@@ -582,24 +582,21 @@ module.exports = createCoreService(
     },
 
     /**
-     * Add a customer reply to an incident
-     * Only Customer users can submit replies on incidents that have been sent to them
+     * Add a reply to an incident
+     * Only Subscribers/Admins can add replies to respond to customer-reported incidents
      * @param {number} serviceRecordId - The service record ID
      * @param {string} incidentId - The incident UUID
      * @param {string} replyText - The reply text
-     * @param {object} user - The customer user making the reply
+     * @param {object} user - The user making the reply (Subscriber or Admin)
+     * @param {string} userRole - The user's role (Subscriber, Admin)
      */
-    async addCustomerReply(serviceRecordId, incidentId, replyText, user) {
+    async addIncidentReply(serviceRecordId, incidentId, replyText, user, userRole) {
       const logs = [];
 
       try {
-        // Verify the incident exists and was sent to client
+        // Verify the incident exists
         const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
           where: { id: serviceRecordId },
-          populate: {
-            property: { populate: { users: true } },
-            customer: { populate: { users: true } },
-          }
         });
 
         if (!serviceRecord) {
@@ -615,21 +612,7 @@ module.exports = createCoreService(
 
         const incident = incidents[incidentIndex];
 
-        // Verify incident was sent to client
-        if (!incident.sentToClient) {
-          throw new Error('This incident has not been shared with you yet');
-        }
-
-        // Verify user has access to this property or customer
-        const propertyUserIds = (serviceRecord.property?.users || []).map(u => u.id);
-        const customerUserIds = (serviceRecord.customer?.users || []).map(u => u.id);
-        const hasAccess = propertyUserIds.includes(user.id) || customerUserIds.includes(user.id);
-
-        if (!hasAccess) {
-          throw new Error('You do not have access to reply to this incident');
-        }
-
-        // Create reply object
+        // Create reply object with role indicator
         const reply = {
           id: require('crypto').randomUUID(),
           text: replyText,
@@ -638,11 +621,12 @@ module.exports = createCoreService(
             id: user.id,
             username: user.username,
             email: user.email,
-            name: user.name
+            name: user.name,
+            role: userRole
           }
         };
 
-        // Add reply to incident's customerReplies array
+        // Add reply to incident's replies array
         const existingReplies = incident.customerReplies || [];
         incidents[incidentIndex] = {
           ...incident,
@@ -655,13 +639,13 @@ module.exports = createCoreService(
           data: { incidents }
         });
 
-        logs.push(`✅ Customer reply added by ${user.username} (${user.name || 'no name'})`);
-        console.log('Customer Reply:', logs.join('\n'));
+        logs.push(`✅ Reply added by ${user.username} (${user.name || 'no name'}) - Role: ${userRole}`);
+        console.log('Incident Reply:', logs.join('\n'));
 
         return { success: true, reply, logs };
       } catch (error) {
         logs.push(`❌ Error: ${error.message}`);
-        console.error('Customer reply error:', error);
+        console.error('Incident reply error:', error);
         return { success: false, error: error.message, logs };
       }
     },

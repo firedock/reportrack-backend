@@ -338,8 +338,8 @@ module.exports = createCoreController(
     },
 
     /**
-     * Customer submits a reply to an incident
-     * Only Customers can use this endpoint on incidents that were sent to them
+     * Add a reply to an incident
+     * Only Subscribers and Admins can add replies to respond to customer incidents
      */
     async addCustomerReply(ctx) {
       try {
@@ -351,7 +351,7 @@ module.exports = createCoreController(
           return ctx.unauthorized('You must be logged in');
         }
 
-        // Verify user is a Customer
+        // Get user role
         let userRole = user.role?.name;
         if (!userRole && user.id) {
           const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
@@ -361,8 +361,9 @@ module.exports = createCoreController(
           userRole = fullUser?.role?.name;
         }
 
-        if (userRole !== 'Customer') {
-          return ctx.forbidden('Only customers can submit replies through this endpoint');
+        // Only allow Subscriber and Admin roles to add replies
+        if (!['Subscriber', 'Admin'].includes(userRole)) {
+          return ctx.forbidden('Only Subscribers can add replies to incidents');
         }
 
         // Validate reply text
@@ -375,7 +376,7 @@ module.exports = createCoreController(
         }
 
         const result = await strapi.service('api::service-record.service-record')
-          .addCustomerReply(id, incidentId, replyText.trim(), user);
+          .addIncidentReply(id, incidentId, replyText.trim(), user, userRole);
 
         if (!result.success) {
           return ctx.badRequest(result.error);
