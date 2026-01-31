@@ -22,6 +22,11 @@ module.exports = createCoreController('api::note.note', ({ strapi }) => ({
 
     const userRole = user?.role?.name;
 
+    // Customers cannot create notes on service records - view only
+    if (userRole === 'Customer' && data.service_record) {
+      return ctx.forbidden('Customers can only view notes on service records');
+    }
+
     // Verify user has access to the service_record if provided
     if (data.service_record) {
       const serviceRecord = await strapi.db.query('api::service-record.service-record').findOne({
