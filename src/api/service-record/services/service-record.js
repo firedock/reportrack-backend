@@ -664,13 +664,23 @@ module.exports = createCoreService(
         logs.push(`✅ Reply added by ${user.username} (${user.name || 'no name'}) - Role: ${userRole}`);
         console.log('Incident Reply:', logs.join('\n'));
 
-        // Send notification to subscribers if reply is from a customer
+        // Send notifications based on who replied
         if (userRole === 'Customer') {
+          // Notify Subscribers when Customer replies
           try {
             await this.sendReplyNotification(serviceRecord, incident, reply);
           } catch (notifyError) {
-            logs.push(`⚠️ Failed to send reply notification: ${notifyError.message}`);
+            logs.push(`⚠️ Failed to send reply notification to subscribers: ${notifyError.message}`);
             console.error('Reply notification error:', notifyError);
+            // Don't fail the whole operation if notification fails
+          }
+        } else if (userRole === 'Subscriber' || userRole === 'Admin') {
+          // Notify Customers when Subscriber/Admin replies
+          try {
+            await this.sendReplyNotificationToCustomer(serviceRecord, incident, reply);
+          } catch (notifyError) {
+            logs.push(`⚠️ Failed to send reply notification to customers: ${notifyError.message}`);
+            console.error('Customer reply notification error:', notifyError);
             // Don't fail the whole operation if notification fails
           }
         }
@@ -729,7 +739,6 @@ module.exports = createCoreService(
 
         const propertyName = property?.name || 'Unknown Property';
         const customerName = reply.createdBy?.name || reply.createdBy?.username || 'Customer';
-        const replyTime = dayjs(reply.createdAt).format('MM/DD/YYYY h:mmA');
         const incidentDescription = incident.description?.length > 100
           ? incident.description.substring(0, 100) + '...'
           : incident.description;
@@ -745,7 +754,6 @@ module.exports = createCoreService(
               <div style="background-color: #f5f5f5; padding: 20px; border-radius: 0 0 5px 5px;">
                 <p><strong>Property:</strong> ${propertyName}</p>
                 <p><strong>Customer:</strong> ${customerName}</p>
-                <p><strong>Reply Time:</strong> ${replyTime}</p>
 
                 <div style="background-color: #f6ffed; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #52c41a;">
                   <h4 style="margin-top: 0; color: #52c41a;">Customer Reply:</h4>
@@ -858,6 +866,192 @@ module.exports = createCoreService(
       } catch (error) {
         logs.push(`❌ Error sending reply notifications: ${error.message}`);
         console.error('Reply notification error:', error);
+        return logs;
+      }
+    },
+
+    /**
+     * Send notification to customers when a subscriber/admin replies to an incident
+     * @param {object} serviceRecord - The service record with property and customer populated
+     * @param {object} incident - The incident that was replied to
+     * @param {object} reply - The reply object with createdBy info
+     */
+    async sendReplyNotificationToCustomer(serviceRecord, incident, reply) {
+      const logs = [];
+
+      // Check if email alerts are enabled
+      const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+      if (!emailAlertsEnabled) {
+        logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
+        console.log('Customer Reply Notification:', logs.join('\n'));
+        return logs;
+      }
+
+      try {
+        const { property, customer, id: serviceRecordId } = serviceRecord;
+
+        // Collect Customer users from property and customer relations
+        const propertyUsers = property?.users || [];
+        const customerUsers = customer?.users || [];
+
+        // Combine and deduplicate users
+        const allUsers = [...propertyUsers];
+        customerUsers.forEach(cu => {
+          if (!allUsers.some(u => u.id === cu.id)) {
+            allUsers.push(cu);
+          }
+        });
+
+        // Filter to only Customer role users
+        const customerRoleUsers = allUsers.filter(user => {
+          // Check if user has Customer role (role might be populated or just an ID)
+          if (user.role?.name === 'Customer') return true;
+          // If role isn't populated, we'll include them and let notification preference filter
+          return true;
+        });
+
+        logs.push(`Customer Reply Notification: Found ${customerRoleUsers.length} potential Customer users`);
+
+        // Filter users who have opted in to receive incident notifications
+        const optedInUsers = customerRoleUsers.filter(user => user.receiveIncidentNotifications !== false);
+
+        logs.push(`${optedInUsers.length} users opted in for incident notifications`);
+
+        if (optedInUsers.length === 0) {
+          logs.push('No Customer users opted in for incident notifications');
+          console.log('Customer Reply Notification:', logs.join('\n'));
+          return logs;
+        }
+
+        const propertyName = property?.name || 'Unknown Property';
+        const subscriberName = reply.createdBy?.name || reply.createdBy?.username || 'Staff';
+        const incidentDescription = incident.description?.length > 100
+          ? incident.description.substring(0, 100) + '...'
+          : incident.description;
+
+        const emailContent = {
+          subject: `[INCIDENT UPDATE] New Response for ${propertyName}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #1890ff; color: white; padding: 15px; border-radius: 5px 5px 0 0;">
+                <h2 style="margin: 0;">New Response to Your Incident Report</h2>
+              </div>
+
+              <div style="background-color: #f5f5f5; padding: 20px; border-radius: 0 0 5px 5px;">
+                <p><strong>Property:</strong> ${propertyName}</p>
+                <p><strong>From:</strong> ${subscriberName}</p>
+
+                <div style="background-color: #e6f7ff; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #1890ff;">
+                  <h4 style="margin-top: 0; color: #1890ff;">Response:</h4>
+                  <p style="white-space: pre-wrap;">${reply.text}</p>
+                </div>
+
+                <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #faad14;">
+                  <h4 style="margin-top: 0; color: #666;">Original Incident:</h4>
+                  <p style="white-space: pre-wrap; color: #666;">${incidentDescription}</p>
+                </div>
+
+                <p style="margin-top: 20px;">
+                  <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/serviceRecords/detail?id=${serviceRecordId}"
+                     style="background-color: #1890ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    View & Reply
+                  </a>
+                </p>
+              </div>
+
+              <p style="margin-top: 20px; color: #666; font-size: 12px;">
+                This is an automated notification from REPORTRACK.
+              </p>
+            </div>
+          `,
+        };
+
+        // Send emails to all opted-in users
+        let emailStats = {
+          total: optedInUsers.length,
+          attempted: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0
+        };
+
+        for (const user of optedInUsers) {
+          if (!user.email) {
+            logs.push(`⚠️  Skipping user ${user.username || user.id}: no email address`);
+            emailStats.skipped++;
+            continue;
+          }
+
+          emailStats.attempted++;
+          logs.push(`📧 Attempting to send customer reply notification to ${user.email}...`);
+
+          try {
+            const emailStart = Date.now();
+            await strapi.plugins['email'].services.email.send({
+              ...emailContent,
+              to: user.email,
+              from: 'noreply@reportrack.com',
+            });
+            const emailDuration = Date.now() - emailStart;
+            logs.push(`✅ Customer reply notification delivered successfully to ${user.email} (${emailDuration}ms)`);
+            emailStats.successful++;
+
+            // Log successful email
+            await strapi.service('api::email-log.email-log').logEmail({
+              to: user.email,
+              subject: emailContent.subject,
+              trigger: 'incident_reply_to_customer',
+              triggerDetails: {
+                serviceRecordId,
+                incidentId: incident.id,
+                replyId: reply.id,
+                propertyName,
+                subscriberName,
+                username: user.username || user.name || 'Unknown',
+              },
+              status: 'success',
+              deliveryTime: emailDuration,
+              relatedEntity: 'service-record',
+              relatedEntityId: serviceRecordId,
+            });
+          } catch (err) {
+            logs.push(`❌ Customer reply notification delivery failed to ${user.email}: ${err.message}`);
+            emailStats.failed++;
+
+            // Log failed email
+            await strapi.service('api::email-log.email-log').logEmail({
+              to: user.email,
+              subject: emailContent.subject,
+              trigger: 'incident_reply_to_customer',
+              triggerDetails: {
+                serviceRecordId,
+                incidentId: incident.id,
+                replyId: reply.id,
+                propertyName,
+                subscriberName,
+                username: user.username || user.name || 'Unknown',
+              },
+              status: 'failed',
+              error: err.message,
+              relatedEntity: 'service-record',
+              relatedEntityId: serviceRecordId,
+            });
+          }
+        }
+
+        // Summary
+        logs.push(`📊 Customer Reply Notification Summary:`);
+        logs.push(`   • Total users: ${emailStats.total}`);
+        logs.push(`   • Successful: ${emailStats.successful}`);
+        logs.push(`   • Failed: ${emailStats.failed}`);
+        logs.push(`   • Success rate: ${emailStats.attempted > 0 ? Math.round((emailStats.successful / emailStats.attempted) * 100) : 0}%`);
+
+        console.log('Customer Reply Notification:', logs.join('\n'));
+
+        return logs;
+      } catch (error) {
+        logs.push(`❌ Error sending customer reply notifications: ${error.message}`);
+        console.error('Customer reply notification error:', error);
         return logs;
       }
     },
