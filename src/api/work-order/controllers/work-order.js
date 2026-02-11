@@ -8,42 +8,88 @@ module.exports = createCoreController(
   ({ strapi }) => ({
     async count(ctx) {
       try {
-        // Extract filters from the context if provided
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        let userRole = user?.role?.name;
+        if (user?.id && !userRole) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         const { filters } = ctx.query || {};
 
-        // Fetch total count of work orders with optional filters
+        let roleFilters = {};
+        if (userRole === 'Customer') {
+          roleFilters = {
+            $and: [
+              { property: { users: { id: { $eq: user.id } } } },
+              { $or: [{ private: { $eq: false } }, { private: { $null: true } }] }
+            ]
+          };
+        } else if (userRole === 'Service Person') {
+          roleFilters = { users_permissions_user: user.id };
+        }
+
+        const combinedWhere = Object.keys(roleFilters).length > 0 && Object.keys(filters || {}).length > 0
+          ? { $and: [roleFilters, filters] }
+          : { ...roleFilters, ...filters };
+
         const totalWorkOrders = await strapi
           .query('api::work-order.work-order')
-          .count({ where: filters });
+          .count({ where: combinedWhere });
 
-        // Prepare the response
-        const response = { count: totalWorkOrders };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: totalWorkOrders });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },
 
     async countPost(ctx) {
       try {
-        // Extract filters from the request body
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        let userRole = user?.role?.name;
+        if (user?.id && !userRole) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         const { filters } = ctx.request.body || {};
 
-        // Fetch total count of work orders with optional filters
+        let roleFilters = {};
+        if (userRole === 'Customer') {
+          roleFilters = {
+            $and: [
+              { property: { users: { id: { $eq: user.id } } } },
+              { $or: [{ private: { $eq: false } }, { private: { $null: true } }] }
+            ]
+          };
+        } else if (userRole === 'Service Person') {
+          roleFilters = { users_permissions_user: user.id };
+        }
+
+        const combinedWhere = Object.keys(roleFilters).length > 0 && Object.keys(filters || {}).length > 0
+          ? { $and: [roleFilters, filters] }
+          : { ...roleFilters, ...filters };
+
         const totalWorkOrders = await strapi
           .query('api::work-order.work-order')
-          .count({ where: filters });
+          .count({ where: combinedWhere });
 
-        // Prepare the response
-        const response = { count: totalWorkOrders };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: totalWorkOrders });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },

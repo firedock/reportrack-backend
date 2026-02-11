@@ -66,9 +66,15 @@ module.exports = createCoreService(
         // console.log('Show Associated', userFilters);
       }
 
+      // Combine userFilters and filters using $and to prevent key collisions
+      // (e.g. both userFilters and column search filters may use 'property' key)
+      const combinedWhere = Object.keys(userFilters).length > 0 && Object.keys(filters).length > 0
+        ? { $and: [userFilters, filters] }
+        : { ...userFilters, ...filters };
+
       // Set up query options with pagination, sorting, and user filters
       const queryOptions = {
-        where: { ...userFilters, ...filters },
+        where: combinedWhere,
         populate: {
           property: {
             populate: ['users'],
@@ -95,7 +101,7 @@ module.exports = createCoreService(
       // Count total records for pagination meta
       const totalCount = await strapi.db
         .query('api::work-order.work-order')
-        .count({ where: { ...userFilters, ...filters } });
+        .count({ where: combinedWhere });
 
       return {
         data: result,

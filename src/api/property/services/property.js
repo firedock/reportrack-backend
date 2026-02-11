@@ -10,13 +10,39 @@ module.exports = createCoreService('api::property.property', ({ strapi }) => ({
     const doAssociatedFilter = queryParams?.showAssociatedOnly === 'true';
     const searchTerm = queryParams?.search || ''; // Extract search term
 
+    // Fetch user role if not populated
+    let userRole = user?.role?.name;
+    if (user?.id && !userRole) {
+      try {
+        const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { id: user.id },
+          populate: ['role']
+        });
+        userRole = fullUser?.role?.name;
+      } catch (err) {
+        console.error('Error fetching user role in findPropertiesByUser:', err);
+      }
+    }
+
     let userFilters = {};
 
-    if (doAssociatedFilter) {
+    if (userRole === 'Customer') {
+      // MANDATORY: Customers can ONLY see properties they are associated with
       userFilters = {
         $or: [
-          { users: { id: user.id } }, // For Subscribers
-          { customer: { users: { id: user.id } } }, // For Customers
+          { users: { id: user.id } },
+          { customer: { users: { id: user.id } } },
+        ],
+      };
+    } else if (userRole === 'Service Person') {
+      // MANDATORY: Service Persons only see their assigned properties
+      userFilters = { users: { id: user.id } };
+    } else if (doAssociatedFilter) {
+      // OPTIONAL: For Subscriber/Admin - toggle-based filtering
+      userFilters = {
+        $or: [
+          { users: { id: user.id } },
+          { customer: { users: { id: user.id } } },
         ],
       };
     }

@@ -12,9 +12,19 @@ dayjs.extend(timezone);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
+// Simple in-memory lock to prevent concurrent alarm checks
+let alarmCheckRunning = false;
+
 module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
   async checkAlarms() {
     const logs = []; // Array to collect log messages
+
+    if (alarmCheckRunning) {
+      logs.push(`[${dayjs().utc().toISOString()}] Alarm check already in progress, skipping this run.`);
+      return { message: 'Alarm check already in progress', logs };
+    }
+
+    alarmCheckRunning = true;
 
     try {
       logs.push(`[${dayjs().utc().toISOString()}] Starting alarm checks...`);
@@ -271,6 +281,8 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         }`
       );
       console.error(error);
+    } finally {
+      alarmCheckRunning = false;
     }
 
     await strapi.entityService.create('api::alarm-log.alarm-log', {
@@ -323,6 +335,12 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         logs.push(`❌ ${msg}`);
         return logs;
       }
+
+      // Mark as notified IMMEDIATELY to prevent duplicate triggers from concurrent cron runs
+      await strapi.db.query('api::alarm.alarm').update({
+        where: { id: alarm.id },
+        data: { notified: dayjs.utc().toISOString() },
+      });
 
       // Alarm times in local timezone
       const alarmStartLocal = dayjs(alarmStartTimeUtc)
@@ -540,12 +558,6 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       logs.push(`   • Failed: ${emailStats.failed}`);
       logs.push(`   • Skipped (no email): ${emailStats.skipped}`);
       logs.push(`   • Success rate: ${emailStats.attempted > 0 ? Math.round((emailStats.successful / emailStats.attempted) * 100) : 0}%`);
-
-      // Update notified
-      await strapi.db.query('api::alarm.alarm').update({
-        where: { id: alarm.id },
-        data: { notified: dayjs.utc().toISOString() },
-      });
 
       return logs;
     } catch (error) {

@@ -4,17 +4,13 @@ module.exports = {
       method: 'GET',
       path: '/customers/custom/count',
       handler: 'customer.count',
-      config: {
-        auth: false,
-      },
+      config: {},
     },
     {
       method: 'POST',
       path: '/customers/custom/count-post',
       handler: 'customer.countPost',
-      config: {
-        auth: false,
-      },
+      config: {},
     },
     {
       method: 'GET',

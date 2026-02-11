@@ -9,48 +9,83 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController(
   'api::customer.customer',
   ({ strapi }) => ({
+    async find(ctx) {
+      if (!ctx.state.user) {
+        return ctx.badRequest('User is not authenticated.');
+      }
+
+      const user = ctx.state.user;
+      const records = await strapi
+        .service('api::customer.customer')
+        .findCustomersByUser(user, ctx.query);
+
+      return ctx.send(records);
+    },
+
     async count(ctx) {
       try {
-        // Extract filters from the context if provided
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        const roleFilters = await strapi
+          .service('api::customer.customer')
+          .getRoleFilters(user);
+
         const { filters } = ctx.query || {};
 
-        // Fetch total count of with optional filters
         const total = await strapi
           .query('api::customer.customer')
-          .count({ where: filters });
+          .count({ where: { ...roleFilters, ...filters } });
 
-        // Prepare the response
-        const response = { count: total };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: total });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },
 
     async countPost(ctx) {
       try {
-        // Extract filters from the request body
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        const roleFilters = await strapi
+          .service('api::customer.customer')
+          .getRoleFilters(user);
+
         const { filters } = ctx.request.body || {};
 
-        // Fetch total count of with optional filters
         const total = await strapi
           .query('api::customer.customer')
-          .count({ where: filters });
+          .count({ where: { ...roleFilters, ...filters } });
 
-        // Prepare the response
-        const response = { count: total };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: total });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },
+
     async getCustomerUsersWithoutProperties(ctx) {
+      if (!ctx.state.user) {
+        return ctx.unauthorized('Authentication required');
+      }
+
+      // Restrict to Subscriber/Admin only - this returns system-wide data
+      let userRole = ctx.state.user?.role?.name;
+      if (!userRole) {
+        const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { id: ctx.state.user.id },
+          populate: ['role']
+        });
+        userRole = fullUser?.role?.name;
+      }
+      if (userRole === 'Customer' || userRole === 'Service Person') {
+        return ctx.forbidden('Access denied');
+      }
+
       try {
         const result = await strapi.db.connection.raw(`
           SELECT * FROM customer_users_without_properties
@@ -61,7 +96,25 @@ module.exports = createCoreController(
         ctx.send({ error: 'Failed to fetch customers without properties' });
       }
     },
+
     async getCustomersWithoutProperties(ctx) {
+      if (!ctx.state.user) {
+        return ctx.unauthorized('Authentication required');
+      }
+
+      // Restrict to Subscriber/Admin only - this returns system-wide data
+      let userRole = ctx.state.user?.role?.name;
+      if (!userRole) {
+        const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { id: ctx.state.user.id },
+          populate: ['role']
+        });
+        userRole = fullUser?.role?.name;
+      }
+      if (userRole === 'Customer' || userRole === 'Service Person') {
+        return ctx.forbidden('Access denied');
+      }
+
       try {
         const result = await strapi.db.connection.raw(`
           SELECT * FROM customers_without_properties

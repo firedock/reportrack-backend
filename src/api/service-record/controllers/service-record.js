@@ -11,42 +11,82 @@ module.exports = createCoreController(
   ({ strapi }) => ({
     async count(ctx) {
       try {
-        // Extract filters from the context if provided
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        let userRole = user?.role?.name;
+        if (user?.id && !userRole) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         const { filters } = ctx.query || {};
 
-        // Fetch total count with optional filters
+        let roleFilters = {};
+        if (userRole === 'Customer') {
+          roleFilters = {
+            property: { users: { id: { $eq: user.id } } },
+          };
+        } else if (userRole === 'Service Person') {
+          roleFilters = { users_permissions_user: user.id };
+        }
+
+        const combinedWhere = Object.keys(roleFilters).length > 0 && Object.keys(filters || {}).length > 0
+          ? { $and: [roleFilters, filters] }
+          : { ...roleFilters, ...filters };
+
         const total = await strapi
           .query('api::service-record.service-record')
-          .count({ where: filters });
+          .count({ where: combinedWhere });
 
-        // Prepare the response
-        const response = { count: total };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: total });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },
 
     async countPost(ctx) {
       try {
-        // Extract filters from the request body
+        if (!ctx.state.user) {
+          return ctx.unauthorized('Authentication required');
+        }
+
+        const user = ctx.state.user;
+        let userRole = user?.role?.name;
+        if (user?.id && !userRole) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         const { filters } = ctx.request.body || {};
 
-        // Fetch total count with optional filters
+        let roleFilters = {};
+        if (userRole === 'Customer') {
+          roleFilters = {
+            property: { users: { id: { $eq: user.id } } },
+          };
+        } else if (userRole === 'Service Person') {
+          roleFilters = { users_permissions_user: user.id };
+        }
+
+        const combinedWhere = Object.keys(roleFilters).length > 0 && Object.keys(filters || {}).length > 0
+          ? { $and: [roleFilters, filters] }
+          : { ...roleFilters, ...filters };
+
         const total = await strapi
           .query('api::service-record.service-record')
-          .count({ where: filters });
+          .count({ where: combinedWhere });
 
-        // Prepare the response
-        const response = { count: total };
-
-        // Send the response
-        ctx.send(response);
+        ctx.send({ count: total });
       } catch (error) {
-        // Send the error response
         ctx.send({ error: error.message });
       }
     },
@@ -284,8 +324,16 @@ module.exports = createCoreController(
           return ctx.unauthorized('You must be logged in');
         }
 
-        // Check if user has Subscriber or Admin role
-        const userRole = user.role?.name;
+        // Get user role - fetch it if not populated
+        let userRole = user.role?.name;
+        if (!userRole && user.id) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         if (!['Subscriber', 'Admin'].includes(userRole)) {
           return ctx.forbidden('Only Subscribers can add notes to incidents');
         }
@@ -317,8 +365,16 @@ module.exports = createCoreController(
           return ctx.unauthorized('You must be logged in');
         }
 
-        // Check if user has Subscriber or Admin role
-        const userRole = user.role?.name;
+        // Get user role - fetch it if not populated
+        let userRole = user.role?.name;
+        if (!userRole && user.id) {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        }
+
         if (!['Subscriber', 'Admin'].includes(userRole)) {
           return ctx.forbidden('Only Subscribers can send incidents to clients');
         }
