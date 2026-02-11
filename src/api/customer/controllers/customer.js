@@ -15,11 +15,36 @@ module.exports = createCoreController(
       }
 
       const user = ctx.state.user;
-      const records = await strapi
-        .service('api::customer.customer')
-        .findCustomersByUser(user, ctx.query);
 
-      return ctx.send(records);
+      // Fetch user role if not populated
+      let userRole = user?.role?.name;
+      if (user?.id && !userRole) {
+        try {
+          const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+            where: { id: user.id },
+            populate: ['role']
+          });
+          userRole = fullUser?.role?.name;
+        } catch (err) {
+          console.error('Error fetching user role in customer find:', err);
+        }
+      }
+
+      // Inject role-based filters into the query before calling super.find()
+      // This preserves the standard Strapi v4 response format (with attributes wrapper)
+      if (userRole === 'Customer') {
+        ctx.query.filters = {
+          ...(ctx.query.filters || {}),
+          users: { id: user.id },
+        };
+      } else if (userRole === 'Service Person') {
+        ctx.query.filters = {
+          ...(ctx.query.filters || {}),
+          properties: { users: { id: user.id } },
+        };
+      }
+
+      return await super.find(ctx);
     },
 
     async count(ctx) {
