@@ -31,8 +31,9 @@ module.exports = createCoreService('api::customer.customer', ({ strapi }) => ({
 
     if (userRole === 'Customer') {
       // MANDATORY: Customers can ONLY see their own customer(s)
+      // Uses property-based path since associations are managed through properties
       userFilters = {
-        users: { id: user.id },
+        properties: { users: { id: user.id } },
       };
     } else if (userRole === 'Service Person') {
       // MANDATORY: Service Persons see customers for properties they're assigned to
@@ -102,7 +103,7 @@ module.exports = createCoreService('api::customer.customer', ({ strapi }) => ({
     }
 
     if (userRole === 'Customer') {
-      return { users: { id: user.id } };
+      return { properties: { users: { id: user.id } } };
     } else if (userRole === 'Service Person') {
       return { properties: { users: { id: user.id } } };
     }

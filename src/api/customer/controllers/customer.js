@@ -32,12 +32,9 @@ module.exports = createCoreController(
 
       // Inject role-based filters into the query before calling super.find()
       // This preserves the standard Strapi v4 response format (with attributes wrapper)
-      if (userRole === 'Customer') {
-        ctx.query.filters = {
-          ...(ctx.query.filters || {}),
-          users: { id: user.id },
-        };
-      } else if (userRole === 'Service Person') {
+      // Both Customer and Service Person use property-based path since
+      // user-customer associations are managed through properties, not direct links
+      if (userRole === 'Customer' || userRole === 'Service Person') {
         ctx.query.filters = {
           ...(ctx.query.filters || {}),
           properties: { users: { id: user.id } },
