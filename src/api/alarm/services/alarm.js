@@ -42,6 +42,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
       );
 
       for (const alarm of alarms) {
+        try {
         const {
           id,
           startTime,
@@ -252,7 +253,7 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
                 property: property.id,
                 startDateTime: {
                   $gte: todayStartUtc,
-                  $lte: alarmEndTimeUtc,
+                  $lte: alarmEndTimeUtc || alarmStartTimeUtc || dayjs.utc().toISOString(),
                 },
               },
               populate: { service_type: true, users_permissions_user: true },
@@ -270,6 +271,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
           logs.push(
             `- ${serviceRecords.length} matching Service record(s) found for property ID ${property.id} during the scheduled time. > Skip alarm.`
           );
+        }
+        } catch (alarmError) {
+          logs.push(`❌ Error processing alarm ID ${alarm.id}: ${alarmError.message}`);
+          console.error(`Error processing alarm ID ${alarm.id}:`, alarmError);
         }
       }
 
