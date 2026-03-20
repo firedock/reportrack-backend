@@ -212,13 +212,16 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             dayjs(record.startDateTime).isSameOrAfter(todayStartUtc)
         );
 
-        // Only check end time if end alarm is enabled
-        const serviceHasEnded = endAlarmDisabled ? true : serviceRecords.some(
-          (record) =>
-            record.endDateTime &&
-            dayjs(record.endDateTime).isSameOrBefore(alarmEndTimeUtc) &&
-            dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
-        );
+        // Only check end time if end alarm is enabled AND end time + delay has passed
+        // If end time hasn't arrived yet, treat as grace period (don't fail prematurely)
+        const serviceHasEnded = endAlarmDisabled ? true :
+          (!alarmEndTimeUtc || currentTimeUtc.isBefore(alarmEndTimeUtc)) ? true :
+          serviceRecords.some(
+            (record) =>
+              record.endDateTime &&
+              dayjs(record.endDateTime).isSameOrBefore(alarmEndTimeUtc) &&
+              dayjs(record.endDateTime).isSameOrAfter(todayStartUtc)
+          );
 
         // Check service person condition if expected_service_person is set
         let servicePersonMatches = true; // Default to true for backward compatibility
@@ -236,10 +239,11 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
         logs.push(`- Service Record Started On Time: ${serviceHasStarted}${startAlarmDisabled ? ' (start alarm disabled - skipped)' : ''}`);
         logs.push(`- Service Record Ended On Time: ${serviceHasEnded}${endAlarmDisabled ? ' (end alarm disabled - skipped)' : ''}`);
 
-        if (!serviceMatches || (!serviceHasStarted && !serviceHasEnded) || !servicePersonMatches) {
+        if (!serviceMatches || !serviceHasStarted || !serviceHasEnded || !servicePersonMatches) {
           const reasons = [];
           if (!serviceMatches) reasons.push('service type mismatch');
-          if (!serviceHasStarted && !serviceHasEnded) reasons.push('missing start/end justification');
+          if (!serviceHasStarted) reasons.push('service not started on time');
+          if (!serviceHasEnded) reasons.push('service not ended on time');
           if (!servicePersonMatches) reasons.push('service person mismatch');
           
           logs.push(
@@ -259,9 +263,10 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
               populate: { service_type: true, users_permissions_user: true },
             });
 
+          const triggerType = !serviceHasStarted ? 'start' : !serviceHasEnded ? 'end' : 'general';
           const alarmLogs = await this.triggerAlarm(
             alarm,
-            'start',
+            triggerType,
             serviceRecordsForDay,
             alarmStartTimeUtc,
             alarmEndTimeUtc
