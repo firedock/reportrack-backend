@@ -213,12 +213,19 @@ module.exports = createCoreController(
         }
       );
 
+      // Preserve incidents before sanitization (JSON field may be stripped by role permissions)
+      let filteredIncidents = entity?.incidents || [];
+
       // Filter incidents for Customer users - only show approved/sent incidents
-      if (entity && userRole === 'Customer' && entity.incidents) {
-        entity.incidents = entity.incidents.filter(incident => incident.sentToClient === true);
+      if (userRole === 'Customer') {
+        filteredIncidents = filteredIncidents.filter(incident => incident.sentToClient === true);
       }
 
       const sanitizedEntity = await this.sanitizeOutput(entity, ctx);
+
+      // Re-attach incidents after sanitization to ensure they're always included
+      sanitizedEntity.incidents = filteredIncidents;
+
       return this.transformResponse(sanitizedEntity);
     },
 

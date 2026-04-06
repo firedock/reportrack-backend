@@ -3,6 +3,12 @@
 
 const { createCoreService } = require('@strapi/strapi').factories;
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const { timezoneFromState } = require('../../../utils/timezoneFromState');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = createCoreService(
   'api::service-record.service-record',
@@ -180,7 +186,8 @@ module.exports = createCoreService(
         const customerName = customer?.name || property?.customer?.name || 'Unknown Customer';
         const reporterName = incident.reportedBy?.username || 'Service Person';
         const serviceTypeName = service_type?.service || 'Service';
-        const reportedTime = dayjs(incident.reportedAt).format('MM/DD/YYYY h:mmA');
+        const tz = timezoneFromState(property?.state);
+        const reportedTime = dayjs.utc(incident.reportedAt).tz(tz).format('MM/DD/YYYY h:mmA');
 
         const emailContent = {
           subject: `[INCIDENT REPORT] Issue Reported at ${propertyName}`,
@@ -443,7 +450,8 @@ module.exports = createCoreService(
         const propertyName = property?.name || 'Unknown Property';
         const customerName = customer?.name || property?.customer?.name || 'Unknown Customer';
         const serviceTypeName = service_type?.service || 'Service';
-        const reportedTime = dayjs(incident.reportedAt).format('MM/DD/YYYY h:mmA');
+        const tz = timezoneFromState(property?.state);
+        const reportedTime = dayjs.utc(incident.reportedAt).tz(tz).format('MM/DD/YYYY h:mmA');
 
         const emailContent = {
           subject: `[INCIDENT REPORT] ${propertyName}`,

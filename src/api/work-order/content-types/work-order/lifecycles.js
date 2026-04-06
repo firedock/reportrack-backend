@@ -1,4 +1,10 @@
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const { timezoneFromState } = require('../../../../utils/timezoneFromState');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = {
   async beforeCreate(event) {
@@ -106,8 +112,9 @@ module.exports = {
       changes.push(`Title changed from "${currentWorkOrder.title}" to "${updatedWorkOrder.title}"`);
     }
     if (currentWorkOrder.dueBy !== updatedWorkOrder.dueBy) {
-      const oldDue = currentWorkOrder.dueBy ? dayjs(currentWorkOrder.dueBy).format('MM/DD/YYYY h:mmA') : 'Not set';
-      const newDue = updatedWorkOrder.dueBy ? dayjs(updatedWorkOrder.dueBy).format('MM/DD/YYYY h:mmA') : 'Not set';
+      const tz = timezoneFromState(updatedWorkOrder.property?.state);
+      const oldDue = currentWorkOrder.dueBy ? dayjs.utc(currentWorkOrder.dueBy).tz(tz).format('MM/DD/YYYY h:mmA') : 'Not set';
+      const newDue = updatedWorkOrder.dueBy ? dayjs.utc(updatedWorkOrder.dueBy).tz(tz).format('MM/DD/YYYY h:mmA') : 'Not set';
       changes.push(`Due date changed from "${oldDue}" to "${newDue}"`);
     }
 

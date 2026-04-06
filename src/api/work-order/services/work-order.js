@@ -3,6 +3,12 @@
 
 const { createCoreService } = require('@strapi/strapi').factories;
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const { timezoneFromState } = require('../../../utils/timezoneFromState');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = createCoreService(
   'api::work-order.work-order',
@@ -156,8 +162,9 @@ module.exports = createCoreService(
           return logs;
         }
         
-        // Format due date
-        const dueDateFormatted = dueBy ? dayjs(dueBy).format('MM/DD/YYYY h:mmA') : 'Not set';
+        // Format due date in property's local timezone
+        const tz = timezoneFromState(property?.state);
+        const dueDateFormatted = dueBy ? dayjs.utc(dueBy).tz(tz).format('MM/DD/YYYY h:mmA') : 'Not set';
         const propertyName = property?.name || 'Unknown Property';
         const customerName = customer?.name || 'Unknown Customer';
         const creatorName = creator?.username || creator?.name || 'System';
