@@ -13,7 +13,7 @@
   "pluginOptions": {},
   "attributes": {
     "note": {
-      "type": "string"
+      "type": "text"
     },
     "account": {
       "type": "relation",
