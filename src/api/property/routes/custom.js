@@ -36,5 +36,11 @@ module.exports = {
       handler: 'property.findByCustomer',
       config: {},
     },
+    {
+      method: 'POST',
+      path: '/properties/custom/reassign-location-scan',
+      handler: 'property.reassignLocationScan',
+      config: {},
+    },
   ],
 };

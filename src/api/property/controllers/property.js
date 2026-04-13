@@ -222,6 +222,95 @@ module.exports = createCoreController(
         ctx.send({ error: error.message });
       }
     },
+    async reassignLocationScan(ctx) {
+      if (!ctx.state.user) {
+        return ctx.unauthorized('Authentication required');
+      }
+
+      // Restrict to Subscriber role
+      let userRole = ctx.state.user?.role?.name;
+      if (!userRole) {
+        const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { id: ctx.state.user.id },
+          populate: ['role']
+        });
+        userRole = fullUser?.role?.name;
+      }
+      if (userRole !== 'Subscriber') {
+        return ctx.forbidden('Only Subscribers can reassign QR codes');
+      }
+
+      const { code, sourcePropertyId, targetPropertyId } = ctx.request.body;
+
+      if (!code || !sourcePropertyId || !targetPropertyId) {
+        return ctx.badRequest('Missing required fields: code, sourcePropertyId, targetPropertyId');
+      }
+
+      if (String(sourcePropertyId) === String(targetPropertyId)) {
+        return ctx.badRequest('Source and target property cannot be the same');
+      }
+
+      const knex = strapi.db.connection;
+
+      try {
+        const result = await knex.transaction(async (trx) => {
+          const sourceProperty = await trx('properties').where({ id: sourcePropertyId }).first();
+          if (!sourceProperty) {
+            throw { status: 404, message: 'Source property not found' };
+          }
+
+          const targetProperty = await trx('properties').where({ id: targetPropertyId }).first();
+          if (!targetProperty) {
+            throw { status: 404, message: 'Target property not found' };
+          }
+
+          const sourceScans = typeof sourceProperty.location_scans === 'string'
+            ? JSON.parse(sourceProperty.location_scans)
+            : (sourceProperty.location_scans || []);
+          const targetScans = typeof targetProperty.location_scans === 'string'
+            ? JSON.parse(targetProperty.location_scans)
+            : (targetProperty.location_scans || []);
+
+          const scanEntry = sourceScans.find((s) => s.code === code);
+          if (!scanEntry) {
+            throw { status: 400, message: 'QR code not found on source property' };
+          }
+
+          const duplicateOnTarget = targetScans.find((s) => s.code === code);
+          if (duplicateOnTarget) {
+            throw { status: 409, message: 'QR code already exists on target property' };
+          }
+
+          const updatedSourceScans = sourceScans.filter((s) => s.code !== code);
+          const updatedTargetScans = [...targetScans, scanEntry];
+
+          await trx('properties')
+            .where({ id: sourcePropertyId })
+            .update({ location_scans: JSON.stringify(updatedSourceScans) });
+
+          await trx('properties')
+            .where({ id: targetPropertyId })
+            .update({ location_scans: JSON.stringify(updatedTargetScans) });
+
+          return {
+            sourcePropertyId,
+            targetPropertyId,
+            movedScan: scanEntry,
+            sourceScans: updatedSourceScans,
+            targetScans: updatedTargetScans,
+          };
+        });
+
+        ctx.send({ success: true, ...result });
+      } catch (error) {
+        if (error.status) {
+          ctx.throw(error.status, error.message);
+        }
+        console.error('Error reassigning location scan:', error);
+        ctx.throw(500, 'Failed to reassign QR code');
+      }
+    },
+
     async locationScans(ctx) {
       try {
         const { code } = ctx.query;

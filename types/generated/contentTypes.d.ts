@@ -690,7 +690,7 @@ export interface ApiNoteNote extends Schema.CollectionType {
       'oneToOne',
       'api::customer.customer'
     >;
-    note: Attribute.String;
+    note: Attribute.Text;
     private: Attribute.Boolean;
     property: Attribute.Relation<
       'api::note.note',
