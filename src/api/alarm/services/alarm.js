@@ -269,7 +269,8 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
             triggerType,
             serviceRecordsForDay,
             alarmStartTimeUtc,
-            alarmEndTimeUtc
+            alarmEndTimeUtc,
+            reasons
           );
           logs.push(...alarmLogs);
         } else {
@@ -313,15 +314,49 @@ module.exports = createCoreService('api::alarm.alarm', ({ strapi }) => ({
     type,
     serviceRecordsForDay,
     alarmStartTimeUtc,
-    alarmEndTimeUtc
+    alarmEndTimeUtc,
+    reasons = []
   ) {
     const logs = [];
-
-    // Check if email alerts are enabled (defaults to false if not set)
     const emailAlertsEnabled = process.env.SEND_EMAIL_ALERTS === 'true';
+
+    // Always create alarm-notification audit records, regardless of email setting.
+    if (alarm.property?.id) {
+      try {
+        const lastRecord = serviceRecordsForDay?.[serviceRecordsForDay.length - 1];
+        const employeeName =
+          lastRecord?.users_permissions_user?.name ||
+          lastRecord?.users_permissions_user?.username ||
+          'No Service Person';
+        const created = await strapi
+          .service('api::alarm-notification.alarm-notification')
+          .createOnTrigger({
+            alarm,
+            type,
+            reasons,
+            alarmStartTime: dayjs(alarmStartTimeUtc)
+              .tz(alarm.timezone || 'UTC')
+              .format('HH:mm'),
+            alarmEndTime: alarmEndTimeUtc
+              ? dayjs(alarmEndTimeUtc)
+                  .tz(alarm.timezone || 'UTC')
+                  .format('HH:mm')
+              : null,
+            employeeName,
+          });
+        logs.push(
+          `📝 Created ${created.length} alarm-notification record(s) for property ${alarm.property.id}`
+        );
+      } catch (notifErr) {
+        logs.push(
+          `⚠️ Failed to create alarm-notification records: ${notifErr.message}`
+        );
+        console.error('alarm-notification createOnTrigger failed:', notifErr);
+      }
+    }
+
     if (!emailAlertsEnabled) {
       logs.push('📧 Email alerts disabled (SEND_EMAIL_ALERTS not set to true)');
-      // Still update notified timestamp so we don't keep trying
       await strapi.db.query('api::alarm.alarm').update({
         where: { id: alarm.id },
         data: { notified: dayjs.utc().toISOString() },

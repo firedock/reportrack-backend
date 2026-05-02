@@ -1,0 +1,110 @@
+{
+  "kind": "collectionType",
+  "collectionName": "alarm_notifications",
+  "info": {
+    "singularName": "alarm-notification",
+    "pluralName": "alarm-notifications",
+    "displayName": "Alarm Notification",
+    "description": "Persistent record of each triggered alarm requiring action. Append-only audit trail."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "status": {
+      "type": "enumeration",
+      "enum": ["Uncleared", "In Progress", "Excused", "Escalated"],
+      "default": "Uncleared",
+      "required": true
+    },
+    "triggeredAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "respondedAt": {
+      "type": "datetime"
+    },
+    "excuseReason": {
+      "type": "enumeration",
+      "enum": [
+        "Late",
+        "Service Person error",
+        "Out sick",
+        "Switched service day",
+        "Other"
+      ]
+    },
+    "notes": {
+      "type": "text"
+    },
+    "escalationNotes": {
+      "type": "text"
+    },
+    "alarmType": {
+      "type": "string"
+    },
+    "triggerReasons": {
+      "type": "json"
+    },
+    "alarmStartTime": {
+      "type": "string"
+    },
+    "alarmEndTime": {
+      "type": "string"
+    },
+    "employeeName": {
+      "type": "string"
+    },
+    "autoEscalated": {
+      "type": "boolean",
+      "default": false
+    },
+    "transitions": {
+      "type": "json"
+    },
+    "alarm": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::alarm.alarm"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::account.account"
+    },
+    "assignedSubscriber": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "respondedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "escalatedTo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "escalatedToRole": {
+      "type": "string"
+    },
+    "service_type": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::service-type.service-type"
+    }
+  }
+}

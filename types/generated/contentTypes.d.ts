@@ -424,6 +424,102 @@ export interface ApiAlarmLogAlarmLog extends Schema.CollectionType {
   };
 }
 
+export interface ApiAlarmNotificationAlarmNotification
+  extends Schema.CollectionType {
+  collectionName: 'alarm_notifications';
+  info: {
+    description: 'Persistent record of each triggered alarm requiring action. Append-only audit trail.';
+    displayName: 'Alarm Notification';
+    pluralName: 'alarm-notifications';
+    singularName: 'alarm-notification';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    account: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'api::account.account'
+    >;
+    alarm: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'api::alarm.alarm'
+    >;
+    alarmEndTime: Attribute.String;
+    alarmStartTime: Attribute.String;
+    alarmType: Attribute.String;
+    assignedSubscriber: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    autoEscalated: Attribute.Boolean & Attribute.DefaultTo<false>;
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    customer: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'api::customer.customer'
+    >;
+    employeeName: Attribute.String;
+    escalatedTo: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    escalatedToRole: Attribute.String;
+    escalationNotes: Attribute.Text;
+    excuseReason: Attribute.Enumeration<
+      [
+        'Late',
+        'Service Person error',
+        'Out sick',
+        'Switched service day',
+        'Other'
+      ]
+    >;
+    notes: Attribute.Text;
+    property: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'api::property.property'
+    >;
+    respondedAt: Attribute.DateTime;
+    respondedBy: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    service_type: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'manyToOne',
+      'api::service-type.service-type'
+    >;
+    status: Attribute.Enumeration<
+      ['Uncleared', 'In Progress', 'Excused', 'Escalated']
+    > &
+      Attribute.Required &
+      Attribute.DefaultTo<'Uncleared'>;
+    transitions: Attribute.JSON;
+    triggeredAt: Attribute.DateTime & Attribute.Required;
+    triggerReasons: Attribute.JSON;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::alarm-notification.alarm-notification',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiAlarmAlarm extends Schema.CollectionType {
   collectionName: 'alarms';
   info: {
@@ -1413,6 +1509,7 @@ declare module '@strapi/types' {
       'admin::user': AdminUser;
       'api::account.account': ApiAccountAccount;
       'api::alarm-log.alarm-log': ApiAlarmLogAlarmLog;
+      'api::alarm-notification.alarm-notification': ApiAlarmNotificationAlarmNotification;
       'api::alarm.alarm': ApiAlarmAlarm;
       'api::audit-log.audit-log': ApiAuditLogAuditLog;
       'api::customer.customer': ApiCustomerCustomer;

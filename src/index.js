@@ -1,22 +1,43 @@
 'use strict';
 
+const NOTIFICATION_PERMISSIONS = {
+  Subscriber: [
+    'api::alarm-notification.alarm-notification.find',
+    'api::alarm-notification.alarm-notification.findOne',
+    'api::alarm-notification.alarm-notification.excuse',
+    'api::alarm-notification.alarm-notification.escalate',
+    'api::alarm-notification.alarm-notification.markInProgress',
+    'api::alarm-notification.alarm-notification.count',
+  ],
+};
+
+async function seedNotificationPermissions(strapi) {
+  for (const [roleName, actions] of Object.entries(NOTIFICATION_PERMISSIONS)) {
+    const role = await strapi.db
+      .query('plugin::users-permissions.role')
+      .findOne({ where: { name: roleName } });
+    if (!role) {
+      console.warn(`[notif-perms] Role "${roleName}" not found — skipping`);
+      continue;
+    }
+    const existing = await strapi.db
+      .query('plugin::users-permissions.permission')
+      .findMany({ where: { role: role.id, action: { $in: actions } } });
+    const existingActions = new Set(existing.map((p) => p.action));
+    const toCreate = actions.filter((a) => !existingActions.has(a));
+    for (const action of toCreate) {
+      await strapi.db
+        .query('plugin::users-permissions.permission')
+        .create({ data: { action, role: role.id } });
+      console.log(`[notif-perms] Granted ${action} → ${roleName}`);
+    }
+  }
+}
+
 module.exports = {
-  /**
-   * An asynchronous register function that runs before
-   * your application is initialized.
-   *
-   * This gives you an opportunity to extend code.
-   */
   register(/*{ strapi }*/) {},
 
-  /**
-   * An asynchronous bootstrap function that runs before
-   * your application gets started.
-   *
-   * This gives you an opportunity to set up your data model,
-   * run jobs, or perform some special logic.
-   */
-  bootstrap({ strapi }) {
+  async bootstrap({ strapi }) {
     const cronEnabled = strapi.config.get('server.cron.enabled');
     console.log('=== Reportrack Configuration ===');
     console.log(`  Cron enabled: ${cronEnabled}`);
@@ -25,5 +46,11 @@ module.exports = {
       console.warn('  WARNING: Cron is DISABLED - alarms will NOT trigger');
     }
     console.log('================================');
+
+    try {
+      await seedNotificationPermissions(strapi);
+    } catch (err) {
+      console.error('[notif-perms] Failed to seed permissions:', err);
+    }
   },
 };
