@@ -4,6 +4,12 @@ const { createCoreService } = require('@strapi/strapi').factories;
 const dayjs = require('dayjs');
 const { sendNotificationEmail } = require('../../../utils/sendNotificationEmail');
 
+// Process-local guard to prevent two SLA checks running concurrently. Without
+// this the scheduled cron + a manual trigger (or two cron beats overlapping)
+// can both escalate the same record, producing duplicate transitions and
+// duplicate emails.
+let slaCheckRunning = false;
+
 module.exports = createCoreService(
   'api::alarm-notification.alarm-notification',
   ({ strapi }) => ({
@@ -159,6 +165,19 @@ module.exports = createCoreService(
      * Idempotent — already-escalated records are skipped.
      */
     async checkSLA() {
+      if (slaCheckRunning) {
+        strapi.log.info('[sla-cron] Already running — skipping this invocation');
+        return { checked: 0, escalated: 0, skipped: 0, skippedReason: 'already_running' };
+      }
+      slaCheckRunning = true;
+      try {
+        return await this._runSlaCheck();
+      } finally {
+        slaCheckRunning = false;
+      }
+    },
+
+    async _runSlaCheck() {
       const now = new Date();
       const uncleared = await strapi.db
         .query('api::alarm-notification.alarm-notification')
@@ -171,6 +190,15 @@ module.exports = createCoreService(
       const summary = { checked: uncleared.length, escalated: 0, skipped: 0 };
 
       for (const notif of uncleared) {
+        // Re-check status before mutating — another concurrent caller may have
+        // moved this record to Escalated already.
+        const fresh = await strapi.db
+          .query('api::alarm-notification.alarm-notification')
+          .findOne({ where: { id: notif.id }, select: ['id', 'status'] });
+        if (fresh?.status !== 'Uncleared') {
+          summary.skipped += 1;
+          continue;
+        }
         try {
           const ageMs = now - new Date(notif.triggeredAt).getTime();
           const config = await strapi
