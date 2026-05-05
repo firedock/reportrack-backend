@@ -27,12 +27,17 @@
       "type": "enumeration",
       "enum": [
         "alarm_notification",
+        "alarm_escalation",
         "work_order_note",
         "work_order_creation",
         "work_order_update",
+        "property_note",
         "service_record",
         "incident_notification",
+        "incident_report",
         "incident_to_client",
+        "incident_reply",
+        "incident_reply_to_customer",
         "manual",
         "other"
       ],

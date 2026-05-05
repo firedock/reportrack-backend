@@ -8,6 +8,8 @@ const NOTIFICATION_PERMISSIONS = {
     'api::alarm-notification.alarm-notification.escalate',
     'api::alarm-notification.alarm-notification.markInProgress',
     'api::alarm-notification.alarm-notification.count',
+    'api::notification-setting.notification-setting.find',
+    'api::notification-setting.notification-setting.update',
   ],
 };
 
@@ -51,6 +53,14 @@ module.exports = {
       await seedNotificationPermissions(strapi);
     } catch (err) {
       console.error('[notif-perms] Failed to seed permissions:', err);
+    }
+
+    try {
+      await strapi
+        .service('api::notification-setting.notification-setting')
+        .ensureSingleton();
+    } catch (err) {
+      console.error('[notification-setting] Failed to ensure singleton:', err);
     }
   },
 };

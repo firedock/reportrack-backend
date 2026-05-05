@@ -705,12 +705,17 @@ export interface ApiEmailLogEmailLog extends Schema.CollectionType {
     trigger: Attribute.Enumeration<
       [
         'alarm_notification',
+        'alarm_escalation',
         'work_order_note',
         'work_order_creation',
         'work_order_update',
+        'property_note',
         'service_record',
         'incident_notification',
+        'incident_report',
         'incident_to_client',
+        'incident_reply',
+        'incident_reply_to_customer',
         'manual',
         'other'
       ]
@@ -806,6 +811,39 @@ export interface ApiNoteNote extends Schema.CollectionType {
       'manyToOne',
       'api::work-order.work-order'
     >;
+  };
+}
+
+export interface ApiNotificationSettingNotificationSetting
+  extends Schema.SingleType {
+  collectionName: 'notification_settings';
+  info: {
+    description: 'Singleton: kill switch + global config for the Notifications feature.';
+    displayName: 'Notification Setting';
+    pluralName: 'notification-settings';
+    singularName: 'notification-setting';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::notification-setting.notification-setting',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    emailsEnabled: Attribute.Boolean &
+      Attribute.Required &
+      Attribute.DefaultTo<false>;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::notification-setting.notification-setting',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
   };
 }
 
@@ -1516,6 +1554,7 @@ declare module '@strapi/types' {
       'api::email-log.email-log': ApiEmailLogEmailLog;
       'api::login-page.login-page': ApiLoginPageLoginPage;
       'api::note.note': ApiNoteNote;
+      'api::notification-setting.notification-setting': ApiNotificationSettingNotificationSetting;
       'api::property.property': ApiPropertyProperty;
       'api::service-record.service-record': ApiServiceRecordServiceRecord;
       'api::service-type.service-type': ApiServiceTypeServiceType;

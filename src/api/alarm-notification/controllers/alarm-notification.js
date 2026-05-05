@@ -2,7 +2,6 @@
 'use strict';
 
 const { createCoreController } = require('@strapi/strapi').factories;
-const { sendNotificationEmail } = require('../../../utils/sendNotificationEmail');
 
 const escalationEmailHtml = ({
   fromUser,
@@ -204,58 +203,62 @@ module.exports = createCoreController(
           }
         );
 
-      // Best-effort email notification to escalation target. We never block the
-      // status change on email failure — the audit record is the source of truth.
-      try {
-        const fullRecord = await strapi.entityService.findOne(
-          'api::alarm-notification.alarm-notification',
-          id,
-          { populate: { property: true, service_type: true } }
+      // Resolve recipients then hand off to the email dispatcher. The
+      // dispatcher gates on the notification-setting.emailsEnabled toggle and
+      // appends an audit transition (Sent / Suppressed / Failed) so the audit
+      // trail is always populated regardless of side-effect outcome.
+      const fullRecord = await strapi.entityService.findOne(
+        'api::alarm-notification.alarm-notification',
+        id,
+        { populate: { property: true, service_type: true } }
+      );
+      let recipients = [];
+      if (escalatedToRecord?.id) {
+        const u = await strapi.entityService.findOne(
+          'plugin::users-permissions.user',
+          escalatedToRecord.id,
+          { fields: ['email', 'username', 'name'] }
         );
-        let recipients = [];
-        if (escalatedToRecord?.id) {
-          const u = await strapi.entityService.findOne(
-            'plugin::users-permissions.user',
-            escalatedToRecord.id,
-            { fields: ['email', 'username', 'name'] }
-          );
-          if (u?.email) recipients.push(u.email);
-        } else if (escalatedToRole) {
-          const usersInRole = await strapi.db
-            .query('plugin::users-permissions.user')
-            .findMany({
-              where: { role: { name: escalatedToRole }, blocked: { $ne: true } },
-              select: ['email', 'username'],
-            });
-          recipients = usersInRole.map((u) => u.email).filter(Boolean);
-        }
-        if (recipients.length) {
-          await sendNotificationEmail({
-            strapi,
-            to: recipients,
-            subject: `Alarm escalated: ${fullRecord.property?.name || 'Property'}`,
-            html: escalationEmailHtml({
-              fromUser: user,
-              notification: fullRecord,
-              escalationNotes,
-              appUrl: process.env.FRONTEND_URL,
-            }),
+        if (u?.email) recipients.push(u.email);
+      } else if (escalatedToRole) {
+        const usersInRole = await strapi.db
+          .query('plugin::users-permissions.user')
+          .findMany({
+            where: { role: { name: escalatedToRole }, blocked: { $ne: true } },
+            select: ['email', 'username'],
           });
-          strapi.log.info(
-            `[escalate] Email sent to ${recipients.length} recipient(s) for alarm-notification ${id}`
-          );
-        } else {
-          strapi.log.warn(
-            `[escalate] No email recipients resolved for alarm-notification ${id}`
-          );
-        }
-      } catch (emailErr) {
-        strapi.log.error(
-          `[escalate] Email send failed for alarm-notification ${id}: ${emailErr.message}`
-        );
+        recipients = usersInRole.map((u) => u.email).filter(Boolean);
       }
 
-      return { data: updated };
+      await strapi
+        .service('api::alarm-notification.alarm-notification')
+        .dispatchEmail({
+          id,
+          recipients,
+          subject: `Alarm escalated: ${fullRecord.property?.name || 'Property'}`,
+          html: escalationEmailHtml({
+            fromUser: user,
+            notification: fullRecord,
+            escalationNotes,
+            appUrl: process.env.FRONTEND_URL,
+          }),
+          trigger: 'alarm_escalation',
+          triggerDetails: {
+            alarmNotificationId: id,
+            propertyName: fullRecord.property?.name || null,
+            escalatedToRole: escalatedToRole || null,
+            escalatedToUserId: escalatedToRecord?.id || null,
+            escalatedByUserId: user.id,
+          },
+        });
+
+      // Re-fetch so the response includes the email transition we just appended.
+      const refreshed = await strapi.entityService.findOne(
+        'api::alarm-notification.alarm-notification',
+        id,
+        { populate: RESPONDED_POPULATE }
+      );
+      return { data: refreshed };
     },
 
     async markInProgress(ctx) {

@@ -1,0 +1,21 @@
+{
+  "kind": "singleType",
+  "collectionName": "notification_settings",
+  "info": {
+    "singularName": "notification-setting",
+    "pluralName": "notification-settings",
+    "displayName": "Notification Setting",
+    "description": "Singleton: kill switch + global config for the Notifications feature."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "emailsEnabled": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    }
+  }
+}
