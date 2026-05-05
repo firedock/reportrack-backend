@@ -16,4 +16,24 @@ module.exports = {
       tz: 'America/Los_Angeles', // Set timezone if needed
     },
   },
+
+  // SLA auto-escalation: every 5 minutes, auto-escalates Uncleared
+  // alarm-notifications past their applicable escalation-config's slaMinutes.
+  slaCheckJob: {
+    task: async ({ strapi }) => {
+      const ts = new Date().toISOString();
+      try {
+        const summary = await strapi
+          .service('api::alarm-notification.alarm-notification')
+          .checkSLA();
+        console.log(`${ts}: SLA check complete.`, summary);
+      } catch (err) {
+        console.error(`${ts}: SLA check error:`, err.message);
+      }
+    },
+    options: {
+      rule: '*/5 * * * *',
+      tz: 'America/Los_Angeles',
+    },
+  },
 };

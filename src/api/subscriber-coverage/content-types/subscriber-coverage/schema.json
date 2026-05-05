@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscriber_coverages",
+  "info": {
+    "singularName": "subscriber-coverage",
+    "pluralName": "subscriber-coverages",
+    "displayName": "Subscriber Coverage",
+    "description": "Time-windowed coverage: one Subscriber covering another (vacation, sick day, etc.)."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "startDate": {
+      "type": "datetime",
+      "required": true
+    },
+    "endDate": {
+      "type": "datetime",
+      "required": true
+    },
+    "notes": {
+      "type": "text"
+    },
+    "coveringSubscriber": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "coveredSubscriber": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::account.account"
+    }
+  }
+}

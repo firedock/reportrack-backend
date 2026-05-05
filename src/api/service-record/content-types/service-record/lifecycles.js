@@ -106,4 +106,31 @@ module.exports = {
       },
     });
   },
+
+  async afterUpdate(event) {
+    const { result } = event;
+    const ctx = strapi.requestContext.get();
+    const editor = ctx?.state?.user;
+    if (editor?.role?.name !== 'Customer') return;
+
+    // Re-fetch with relations so the client-change record can capture them.
+    const fullRecord = await strapi.db
+      .query('api::service-record.service-record')
+      .findOne({
+        where: { id: result.id },
+        populate: { property: true, customer: true, account: true },
+      });
+    if (!fullRecord) return;
+
+    await strapi.service('api::client-change.client-change').record({
+      changeType: 'Service Record Updated',
+      entityType: 'service-record',
+      entityId: fullRecord.id,
+      changeDetails: { updatedFields: Object.keys(event.params?.data || {}) },
+      property: fullRecord.property?.id,
+      customer: fullRecord.customer?.id,
+      account: fullRecord.account?.id,
+      changedByUser: editor.id,
+    });
+  },
 };

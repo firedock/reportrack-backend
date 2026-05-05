@@ -64,6 +64,11 @@ module.exports = createCoreController(
     },
 
     async findOne(ctx) {
+      // The core router's `/:id` is registered before custom-alarm-notification.js's
+      // `/count`, so Koa matches `/alarm-notifications/count` here first. Proxy.
+      if (ctx.params.id === 'count') {
+        return this.count(ctx);
+      }
       const user = ctx.state.user;
       const role = user?.role?.name;
       if (!ROLE_NAMES_FOR_DEFAULT_ACCESS.includes(role)) {
@@ -91,9 +96,6 @@ module.exports = createCoreController(
         return errorResponse(ctx, 403, 'Forbidden');
       }
       const { filters = {} } = ctx.query || {};
-      const where = strapi.entityService.uploadFiles
-        ? filters
-        : filters; // pass through; entityService handles filter format
       const total = await strapi.db
         .query('api::alarm-notification.alarm-notification')
         .count({ where: filters });

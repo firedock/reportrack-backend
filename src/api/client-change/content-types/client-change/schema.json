@@ -1,0 +1,70 @@
+{
+  "kind": "collectionType",
+  "collectionName": "client_changes",
+  "info": {
+    "singularName": "client-change",
+    "pluralName": "client-changes",
+    "displayName": "Client Change",
+    "description": "Records changes made by Customer-role users to service-records and work-orders, so Subscribers can review."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "changeType": {
+      "type": "string",
+      "required": true
+    },
+    "entityType": {
+      "type": "enumeration",
+      "enum": ["service-record", "work-order"],
+      "required": true
+    },
+    "entityId": {
+      "type": "integer",
+      "required": true
+    },
+    "changeDetails": {
+      "type": "json"
+    },
+    "changedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["Unread", "Viewed"],
+      "default": "Unread",
+      "required": true
+    },
+    "viewedAt": {
+      "type": "datetime"
+    },
+    "viewedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "changedByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::customer.customer"
+    },
+    "account": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::account.account"
+    }
+  }
+}

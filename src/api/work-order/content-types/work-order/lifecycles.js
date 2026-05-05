@@ -58,6 +58,20 @@ module.exports = {
     if (createdWorkOrder) {
       // Send creation notification
       await strapi.service('api::work-order.work-order').sendCreationNotification(createdWorkOrder, user);
+
+      // Record a client-change row when a Customer creates a work order.
+      if (user?.role?.name === 'Customer') {
+        await strapi.service('api::client-change.client-change').record({
+          changeType: 'Work Order Created',
+          entityType: 'work-order',
+          entityId: createdWorkOrder.id,
+          changeDetails: { title: createdWorkOrder.title, status: createdWorkOrder.status },
+          property: createdWorkOrder.property?.id,
+          customer: createdWorkOrder.customer?.id,
+          account: createdWorkOrder.account?.id,
+          changedByUser: user.id,
+        });
+      }
     }
   },
   
@@ -121,6 +135,26 @@ module.exports = {
     if (changes.length > 0) {
       // Send notifications
       await strapi.service('api::work-order.work-order').sendChangeNotification(updatedWorkOrder, changes);
+
+      // Record a client-change row when the editor is a Customer so Subscribers
+      // can review what their clients have changed.
+      const ctx = strapi.requestContext.get();
+      const editor = ctx?.state?.user;
+      if (editor?.role?.name === 'Customer') {
+        await strapi.service('api::client-change.client-change').record({
+          changeType:
+            currentWorkOrder.status !== updatedWorkOrder.status
+              ? 'Work Order Status Changed'
+              : 'Work Order Updated',
+          entityType: 'work-order',
+          entityId: updatedWorkOrder.id,
+          changeDetails: { changes },
+          property: updatedWorkOrder.property?.id,
+          customer: updatedWorkOrder.customer?.id,
+          account: updatedWorkOrder.account?.id,
+          changedByUser: editor.id,
+        });
+      }
     }
   },
 };

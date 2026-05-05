@@ -151,6 +151,134 @@ module.exports = createCoreService(
     },
 
     /**
+     * SLA auto-escalation. Looks for Uncleared alarm-notifications whose age
+     * has exceeded the applicable escalation-config's slaMinutes (or the
+     * 60-minute default if no config), then auto-escalates them and dispatches
+     * an email to the configured target (gated by the global toggle).
+     *
+     * Idempotent — already-escalated records are skipped.
+     */
+    async checkSLA() {
+      const now = new Date();
+      const uncleared = await strapi.db
+        .query('api::alarm-notification.alarm-notification')
+        .findMany({
+          where: { status: 'Uncleared' },
+          populate: { property: true, account: true, service_type: true },
+        });
+
+      const SYSTEM = { id: 0, name: 'System' };
+      const summary = { checked: uncleared.length, escalated: 0, skipped: 0 };
+
+      for (const notif of uncleared) {
+        try {
+          const ageMs = now - new Date(notif.triggeredAt).getTime();
+          const config = await strapi
+            .service('api::escalation-config.escalation-config')
+            .findApplicable({ accountId: notif.account?.id });
+          const slaMinutes = config?.slaMinutes ?? 60;
+          if (ageMs < slaMinutes * 60 * 1000) {
+            summary.skipped += 1;
+            continue;
+          }
+
+          // Determine target
+          let recipients = [];
+          let escalatedTo = null;
+          let escalatedToRole = null;
+          if (config?.targetType === 'user' && (config.targetUsers || []).length) {
+            const userIds = config.targetUsers.map((u) => u.id);
+            const users = await strapi.db
+              .query('plugin::users-permissions.user')
+              .findMany({
+                where: { id: { $in: userIds }, blocked: { $ne: true } },
+                select: ['id', 'email', 'username', 'name'],
+              });
+            recipients = users.map((u) => u.email).filter(Boolean);
+            escalatedTo = users[0]?.id || null;
+          } else {
+            const roleName = config?.targetRole || 'Subscriber';
+            escalatedToRole = roleName;
+            const usersInRole = await strapi.db
+              .query('plugin::users-permissions.user')
+              .findMany({
+                where: {
+                  role: { name: roleName },
+                  blocked: { $ne: true },
+                },
+                select: ['email', 'username'],
+              });
+            recipients = usersInRole.map((u) => u.email).filter(Boolean);
+          }
+
+          const at = new Date().toISOString();
+          await this.appendTransition(
+            notif.id,
+            {
+              at,
+              by: SYSTEM,
+              action: 'Auto-Escalated (SLA breach)',
+              toStatus: 'Escalated',
+              fromStatus: 'Uncleared',
+              escalationNotes: `SLA breach: ${slaMinutes} minutes elapsed without response.`,
+              escalatedTo: escalatedTo
+                ? {
+                    id: escalatedTo,
+                    name:
+                      (config?.targetUsers || []).find((u) => u.id === escalatedTo)
+                        ?.name || 'Target',
+                  }
+                : null,
+              escalatedToRole,
+              autoEscalated: true,
+            },
+            {
+              status: 'Escalated',
+              escalationNotes: `SLA breach: ${slaMinutes} minutes elapsed without response.`,
+              escalatedTo,
+              escalatedToRole,
+              respondedAt: at,
+              respondedBy: null,
+              autoEscalated: true,
+            }
+          );
+
+          await this.dispatchEmail({
+            id: notif.id,
+            recipients,
+            subject: `Alarm auto-escalated: ${notif.property?.name || 'Property'}`,
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #722ed1;">Alarm Auto-Escalated</h2>
+              <p>An alarm has exceeded its SLA threshold (${slaMinutes} min) without response and was auto-escalated by the system.</p>
+              <p><strong>Property:</strong> ${notif.property?.name || '—'}</p>
+              <p><strong>Service:</strong> ${notif.service_type?.service || '—'}</p>
+              <p><strong>Triggered:</strong> ${new Date(notif.triggeredAt).toLocaleString()}</p>
+              <p><strong>Reason(s):</strong> ${(notif.triggerReasons || []).join('<br/>')}</p>
+              ${process.env.FRONTEND_URL ? `<p><a href="${process.env.FRONTEND_URL}/notifications" style="background:#1677ff;color:#fff;padding:10px 16px;border-radius:4px;text-decoration:none;">View in Reportrack</a></p>` : ''}
+            </div>`,
+            trigger: 'alarm_escalation',
+            triggerDetails: {
+              alarmNotificationId: notif.id,
+              autoEscalated: true,
+              slaMinutes,
+            },
+          });
+
+          summary.escalated += 1;
+        } catch (err) {
+          strapi.log.error(
+            `[sla-cron] Error processing alarm-notification ${notif.id}: ${err.message}`
+          );
+        }
+      }
+
+      strapi.log.info(
+        `[sla-cron] Checked ${summary.checked}, escalated ${summary.escalated}, skipped ${summary.skipped}`
+      );
+      return summary;
+    },
+
+    /**
      * Create alarm-notification records for every Subscriber assigned to the
      * triggering alarm's property. Called from alarm.triggerAlarm().
      */

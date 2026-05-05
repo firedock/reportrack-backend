@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "escalation_configs",
+  "info": {
+    "singularName": "escalation-config",
+    "pluralName": "escalation-configs",
+    "displayName": "Escalation Config",
+    "description": "Per-account escalation rules used by the SLA auto-escalation cron and the manual escalate flow."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "slaMinutes": {
+      "type": "integer",
+      "required": true,
+      "default": 60
+    },
+    "targetType": {
+      "type": "enumeration",
+      "enum": ["user", "role"],
+      "required": true,
+      "default": "role"
+    },
+    "targetRole": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "account": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::account.account"
+    },
+    "targetUsers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}
