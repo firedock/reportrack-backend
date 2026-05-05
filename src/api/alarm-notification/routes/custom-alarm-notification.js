@@ -26,5 +26,11 @@ module.exports = {
       handler: 'alarm-notification.count',
       config: { policies: [], middlewares: [] },
     },
+    {
+      method: 'POST',
+      path: '/alarm-notifications/run-sla-check',
+      handler: 'alarm-notification.runSlaCheck',
+      config: { policies: [], middlewares: [] },
+    },
   ],
 };

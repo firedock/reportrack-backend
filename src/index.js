@@ -8,6 +8,7 @@ const NOTIFICATION_PERMISSIONS = {
     'api::alarm-notification.alarm-notification.escalate',
     'api::alarm-notification.alarm-notification.markInProgress',
     'api::alarm-notification.alarm-notification.count',
+    'api::alarm-notification.alarm-notification.runSlaCheck',
     'api::notification-setting.notification-setting.find',
     'api::notification-setting.notification-setting.update',
     'api::escalation-config.escalation-config.find',

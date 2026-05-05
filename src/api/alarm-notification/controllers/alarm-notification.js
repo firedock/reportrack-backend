@@ -263,6 +263,17 @@ module.exports = createCoreController(
       return { data: refreshed };
     },
 
+    /** Manually invoke the SLA-check service. Useful when CRON_ENABLED=false. */
+    async runSlaCheck(ctx) {
+      if (!ROLE_NAMES_FOR_DEFAULT_ACCESS.includes(ctx.state.user?.role?.name)) {
+        return errorResponse(ctx, 403, 'Forbidden');
+      }
+      const summary = await strapi
+        .service('api::alarm-notification.alarm-notification')
+        .checkSLA();
+      return { data: summary };
+    },
+
     async markInProgress(ctx) {
       const { id } = ctx.params;
       const user = ctx.state.user;
