@@ -33,7 +33,8 @@ const RESPONDED_POPULATE = {
   account: true,
   alarm: true,
   service_type: true,
-  assignedSubscriber: { fields: ['id', 'username', 'name'] },
+  assignedSubscribers: { fields: ['id', 'username', 'name'] },
+  primarySubscriber: { fields: ['id', 'username', 'name'] },
   respondedBy: { fields: ['id', 'username', 'name'] },
   escalatedTo: { fields: ['id', 'username', 'name'] },
 };
@@ -212,7 +213,13 @@ module.exports = createCoreController(
       const fullRecord = await strapi.entityService.findOne(
         'api::alarm-notification.alarm-notification',
         id,
-        { populate: { property: true, service_type: true } }
+        {
+          populate: {
+            property: true,
+            service_type: true,
+            assignedSubscribers: { fields: ['id', 'email', 'username', 'blocked'] },
+          },
+        }
       );
       let recipients = [];
       if (escalatedToRecord?.id) {
@@ -223,13 +230,13 @@ module.exports = createCoreController(
         );
         if (u?.email) recipients.push(u.email);
       } else if (escalatedToRole) {
-        const usersInRole = await strapi.db
-          .query('plugin::users-permissions.user')
-          .findMany({
-            where: { role: { name: escalatedToRole }, blocked: { $ne: true } },
-            select: ['email', 'username'],
-          });
-        recipients = usersInRole.map((u) => u.email).filter(Boolean);
+        // Property-scoped: only the Subscribers assigned to THIS alarm's
+        // property, not every user with the role globally. Prevents the
+        // 2026-05-06 leak where 180 emails went to all 20 Subscribers
+        // including non-associated CFO/admin accounts.
+        recipients = (fullRecord.assignedSubscribers || [])
+          .filter((u) => !u.blocked && u.email)
+          .map((u) => u.email);
       }
 
       await strapi

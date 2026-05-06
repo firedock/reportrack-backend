@@ -83,7 +83,12 @@
       "relation": "manyToOne",
       "target": "api::account.account"
     },
-    "assignedSubscriber": {
+    "assignedSubscribers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "primarySubscriber": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user"

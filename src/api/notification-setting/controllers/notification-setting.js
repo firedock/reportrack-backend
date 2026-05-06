@@ -37,6 +37,12 @@ module.exports = createCoreController(
       if (typeof incoming.emailsEnabled === 'boolean') {
         data.emailsEnabled = incoming.emailsEnabled;
       }
+      if (typeof incoming.browserNotificationsEnabled === 'boolean') {
+        data.browserNotificationsEnabled = incoming.browserNotificationsEnabled;
+      }
+      if (typeof incoming.soundAlertsEnabled === 'boolean') {
+        data.soundAlertsEnabled = incoming.soundAlertsEnabled;
+      }
       ctx.request.body = { data };
       return super.update(ctx);
     },

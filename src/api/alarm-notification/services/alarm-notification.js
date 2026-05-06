@@ -183,7 +183,12 @@ module.exports = createCoreService(
         .query('api::alarm-notification.alarm-notification')
         .findMany({
           where: { status: 'Uncleared' },
-          populate: { property: true, account: true, service_type: true },
+          populate: {
+            property: true,
+            account: true,
+            service_type: true,
+            assignedSubscribers: true,
+          },
         });
 
       const SYSTEM = { id: 0, name: 'System' };
@@ -227,16 +232,13 @@ module.exports = createCoreService(
           } else {
             const roleName = config?.targetRole || 'Subscriber';
             escalatedToRole = roleName;
-            const usersInRole = await strapi.db
-              .query('plugin::users-permissions.user')
-              .findMany({
-                where: {
-                  role: { name: roleName },
-                  blocked: { $ne: true },
-                },
-                select: ['email', 'username'],
-              });
-            recipients = usersInRole.map((u) => u.email).filter(Boolean);
+            // Property-scoped: only the Subscribers assigned to this specific
+            // alarm-notification, not every user with the role globally.
+            // Fixes the 2026-05-06 incident where the SLA cron sent 180 emails
+            // to all 20 Subscribers including non-associated admin/CFO accounts.
+            recipients = (notif.assignedSubscribers || [])
+              .filter((u) => !u.blocked && u.email)
+              .map((u) => u.email);
           }
 
           const at = new Date().toISOString();
@@ -307,8 +309,15 @@ module.exports = createCoreService(
     },
 
     /**
-     * Create alarm-notification records for every Subscriber assigned to the
-     * triggering alarm's property. Called from alarm.triggerAlarm().
+     * Create ONE alarm-notification record per alarm trigger, linking all
+     * Subscribers assigned to the alarm's property as assignedSubscribers
+     * (many-to-many). The first Subscriber (lowest id) is marked as the
+     * primarySubscriber for accountability — the rest can still view, action,
+     * and receive emails.
+     *
+     * Updates by any assigned Subscriber are visible to all (single record,
+     * single audit trail). This replaces the prior 1-record-per-Subscriber
+     * fan-out, which created duplicate work and divergent audit trails.
      */
     async createOnTrigger({
       alarm,
@@ -329,32 +338,34 @@ module.exports = createCoreService(
           populate: ['role'],
         });
 
-      const created = [];
-      for (const subscriber of subscribers) {
-        const record = await strapi.entityService.create(
-          'api::alarm-notification.alarm-notification',
-          {
-            data: {
-              status: 'Uncleared',
-              triggeredAt: dayjs.utc().toISOString(),
-              alarmType: type,
-              triggerReasons: reasons,
-              alarmStartTime,
-              alarmEndTime,
-              employeeName,
-              alarm: alarm.id,
-              property: alarm.property?.id || null,
-              customer: alarm.customer?.id || null,
-              account: alarm.account?.id || null,
-              assignedSubscriber: subscriber.id,
-              service_type: alarm.service_type?.id || null,
-              transitions: [],
-            },
-          }
-        );
-        created.push(record);
-      }
-      return created;
+      if (subscribers.length === 0) return [];
+
+      const subscriberIds = subscribers.map((s) => s.id);
+      const primary = subscribers[0];
+
+      const record = await strapi.entityService.create(
+        'api::alarm-notification.alarm-notification',
+        {
+          data: {
+            status: 'Uncleared',
+            triggeredAt: dayjs.utc().toISOString(),
+            alarmType: type,
+            triggerReasons: reasons,
+            alarmStartTime,
+            alarmEndTime,
+            employeeName,
+            alarm: alarm.id,
+            property: alarm.property?.id || null,
+            customer: alarm.customer?.id || null,
+            account: alarm.account?.id || null,
+            assignedSubscribers: subscriberIds,
+            primarySubscriber: primary.id,
+            service_type: alarm.service_type?.id || null,
+            transitions: [],
+          },
+        }
+      );
+      return [record];
     },
   })
 );
